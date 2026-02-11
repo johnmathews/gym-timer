@@ -1,4 +1,5 @@
 import { writable, derived, type Readable } from "svelte/store";
+import { log } from "./logger";
 
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
 export type TimerPhase = "work" | "rest";
@@ -42,6 +43,7 @@ export function createTimer() {
   }
 
   function configure(work: number, rest: number, reps: number) {
+    log("configure", { work, rest, reps });
     _workDuration = work;
     _restDuration = rest;
     _totalReps = reps <= 0 ? 1 : reps;
@@ -71,6 +73,7 @@ export function createTimer() {
 
         if (currentPhase === "work" && rep < _totalReps && _restDuration > 0) {
           // Work done, start rest
+          log("phase:work→rest", { rep });
           phase.set("rest");
           return _restDuration;
         } else if (
@@ -79,15 +82,18 @@ export function createTimer() {
           _restDuration === 0
         ) {
           // Work done, skip rest, next rep
+          log("phase:skip-rest", { rep: rep + 1 });
           currentRep.set(rep + 1);
           return _workDuration;
         } else if (currentPhase === "rest") {
           // Rest done, next rep
+          log("phase:rest→work", { rep: rep + 1 });
           currentRep.set(rep + 1);
           phase.set("work");
           return _workDuration;
         } else {
           // Final rep work done
+          log("finished");
           clearTick();
           status.set("finished");
           return 0;
@@ -104,6 +110,7 @@ export function createTimer() {
     if (currentRemaining <= 0) return;
     if (currentStatus === "running") return;
 
+    log("start", { status: currentStatus, remaining: currentRemaining });
     status.set("running");
     clearTick();
 
@@ -114,11 +121,13 @@ export function createTimer() {
     const currentStatus = getStore(status);
     if (currentStatus !== "running") return;
 
+    log("pause", { remaining: getStore(remaining) });
     clearTick();
     status.set("paused");
   }
 
   function reset() {
+    log("reset");
     clearTick();
     remaining.set(_workDuration);
     phase.set("work");
@@ -127,6 +136,7 @@ export function createTimer() {
   }
 
   function destroy() {
+    log("destroy");
     clearTick();
   }
 

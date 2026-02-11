@@ -1,199 +1,258 @@
 import { test, expect } from '@playwright/test';
 
-// Duration stops: [0,5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120,150,180,210,240,270,300]
-// Index 1 = 5s, Index 6 = 30s
-// Rest stops: [0,5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120]
-// Index 1 = 5s
-
 test.describe('Gym Timer', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-	});
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
 
-	test('shows the app title', async ({ page }) => {
-		await expect(page.getByRole('heading', { name: 'Gym Timer' })).toBeVisible();
-	});
+  test('shows three config cards on landing', async ({ page }) => {
+    await expect(page.getByTestId('config-card-work')).toBeVisible();
+    await expect(page.getByTestId('config-card-rest')).toBeVisible();
+    await expect(page.getByTestId('config-card-repeat')).toBeVisible();
+  });
 
-	test('has a duration slider with non-linear stops', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Duration' });
-		await expect(slider).toBeVisible();
-		await expect(slider).toHaveAttribute('min', '0');
-		await expect(slider).toHaveAttribute('max', '24');
-	});
+  test('config cards show default values', async ({ page }) => {
+    await expect(page.getByTestId('config-card-work')).toContainText('0:30');
+    await expect(page.getByTestId('config-card-rest')).toContainText('0:10');
+    await expect(page.getByTestId('config-card-repeat')).toContainText('x1');
+  });
 
-	test('has a rest slider with non-linear stops', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Rest' });
-		await expect(slider).toBeVisible();
-		await expect(slider).toHaveAttribute('min', '0');
-		await expect(slider).toHaveAttribute('max', '18');
-	});
+  test('shows total time and play button', async ({ page }) => {
+    await expect(page.getByTestId('total-time')).toBeVisible();
+    await expect(page.getByTestId('play-button')).toBeVisible();
+  });
 
-	test('has a reps slider', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Reps' });
-		await expect(slider).toBeVisible();
-		await expect(slider).toHaveAttribute('min', '0');
-		await expect(slider).toHaveAttribute('max', '10');
-		await expect(slider).toHaveAttribute('step', '1');
-	});
+  test('total time is calculated correctly', async ({ page }) => {
+    // Default: 30s work * 1 rep + 0 rest = 30s total => 0:30
+    await expect(page.getByTestId('total-time')).toHaveText('0:30');
+  });
 
-	test('default duration is 30 seconds', async ({ page }) => {
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:30');
-	});
+  test('tapping work card opens ruler picker', async ({ page }) => {
+    await page.getByTestId('config-card-work').click();
+    await expect(page.getByTestId('ruler-picker')).toBeVisible();
+    // Should show Cancel button
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  });
 
-	test('slider is touch-friendly (at least 44px tall)', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Duration' });
-		const box = await slider.boundingBox();
-		expect(box).not.toBeNull();
-		expect(box!.height).toBeGreaterThanOrEqual(44);
-	});
+  test('cancel reverts picker value', async ({ page }) => {
+    await page.getByTestId('config-card-work').click();
+    // Click a tick to change the value
+    await page.getByTestId('ruler-tick-60').click({ force: true });
+    // Cancel
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    // Should return to cards with original value
+    await expect(page.getByTestId('config-card-work')).toContainText('0:30');
+  });
 
-	test('shows start button initially', async ({ page }) => {
-		await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
-	});
+  test('play button starts timer and shows countdown', async ({ page }) => {
+    await page.getByTestId('play-button').click();
 
-	test('does not show reset button when idle', async ({ page }) => {
-		await expect(page.getByRole('button', { name: 'Reset' })).not.toBeVisible();
-	});
+    await expect(page.getByTestId('countdown-time')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reset' })).toBeVisible();
+  });
 
-	test('can set duration via slider and start timer', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Duration' });
-		await slider.fill('1'); // index 1 = 5 seconds
+  test('shows start button when idle (not play button)', async ({ page }) => {
+    // In running/paused state we get Start/Resume button from TimerControls
+    await page.getByTestId('play-button').click();
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
+  });
 
-		await page.getByRole('button', { name: 'Start' }).click();
+  test('does not show reset button when idle', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Reset' })).not.toBeVisible();
+  });
 
-		await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Reset' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Start' })).not.toBeVisible();
-	});
+  test('counts down and finishes with alert', async ({ page }) => {
+    // Set duration to 5s via ruler picker
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    // Close picker by tapping header
+    await page.locator('.header').click();
 
-	test('all sliders are disabled while timer is running', async ({ page }) => {
-		await page.getByRole('button', { name: 'Start' }).click();
-		await expect(page.getByRole('slider', { name: 'Duration' })).toBeDisabled();
-		await expect(page.getByRole('slider', { name: 'Rest' })).toBeDisabled();
-		await expect(page.getByRole('slider', { name: 'Reps' })).toBeDisabled();
-	});
+    await page.getByTestId('play-button').click();
 
-	test('counts down and finishes with alert', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Duration' });
-		await slider.fill('1'); // index 1 = 5 seconds
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
 
-		await page.getByRole('button', { name: 'Start' }).click();
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/finished/);
+  });
 
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+  test('pause and resume works', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    await page.waitForTimeout(2000);
 
-		const app = page.locator('.app');
-		await expect(app).toHaveClass(/finished/);
-	});
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
 
-	test('pause and resume works', async ({ page }) => {
-		await page.getByRole('button', { name: 'Start' }).click();
-		await page.waitForTimeout(2000);
+    const timeText = await page.getByTestId('countdown-time').textContent();
+    await page.waitForTimeout(1200);
+    await expect(page.getByTestId('countdown-time')).toHaveText(timeText!);
 
-		await page.getByRole('button', { name: 'Pause' }).click();
-		await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+  });
 
-		const timeText = await page.getByTestId('countdown-time').textContent();
-		await page.waitForTimeout(1200);
-		await expect(page.getByTestId('countdown-time')).toHaveText(timeText!);
+  test('reset returns to idle with config cards', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    await page.waitForTimeout(2000);
 
-		await page.getByRole('button', { name: 'Resume' }).click();
-		await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
-	});
+    await page.getByRole('button', { name: 'Reset' }).click();
 
-	test('reset returns to original duration', async ({ page }) => {
-		await page.getByRole('button', { name: 'Start' }).click();
-		await page.waitForTimeout(2000);
+    // Should be back to config cards
+    await expect(page.getByTestId('config-card-work')).toBeVisible();
+    await expect(page.getByTestId('total-time')).toBeVisible();
+  });
 
-		await page.getByRole('button', { name: 'Reset' }).click();
+  test('app fills the full viewport width on a laptop-sized screen', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
 
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:30');
-		await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
-	});
+    const app = page.locator('.app');
+    const box = await app.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(1280 - 1);
+  });
 
-	test('app fills the full viewport width on a laptop-sized screen', async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 800 });
-		await page.goto('/');
+  test('rep counter shown during multi-rep workout', async ({ page }) => {
+    // Set reps to 2
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-2').click({ force: true });
+    await page.locator('.header').click();
 
-		const app = page.locator('.app');
-		const box = await app.boundingBox();
-		expect(box).not.toBeNull();
-		expect(box!.width).toBeGreaterThanOrEqual(1280 - 1);
-	});
+    // Set work to 5s
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
 
-	test('rep counter shown during multi-rep workout', async ({ page }) => {
-		const repsSlider = page.getByRole('slider', { name: 'Reps' });
-		await repsSlider.fill('2');
-		const durationSlider = page.getByRole('slider', { name: 'Duration' });
-		await durationSlider.fill('1'); // index 1 = 5s
+    await page.getByTestId('play-button').click();
 
-		await expect(page.getByTestId('rep-counter')).toBeVisible();
-		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
-		await expect(page.getByTestId('phase-label')).toHaveText('Work');
-	});
+    await expect(page.getByTestId('rep-counter')).toBeVisible();
+    await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+    await expect(page.getByTestId('phase-label')).toHaveText('Work');
+  });
 
-	test('multi-rep with rest cycles through both reps', async ({ page }) => {
-		const durationSlider = page.getByRole('slider', { name: 'Duration' });
-		await durationSlider.fill('1'); // index 1 = 5s
-		const restSlider = page.getByRole('slider', { name: 'Rest' });
-		await restSlider.fill('1'); // index 1 = 5s
-		const repsSlider = page.getByRole('slider', { name: 'Reps' });
-		await repsSlider.fill('2');
+  test('multi-rep with rest cycles through both reps', async ({ page }) => {
+    // Set work to 5s
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
 
-		await page.getByRole('button', { name: 'Start' }).click();
+    // Set rest to 5s
+    await page.getByTestId('config-card-rest').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
 
-		// Should start in work phase, rep 1
-		await expect(page.getByTestId('phase-label')).toHaveText('Work');
-		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+    // Set reps to 2
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-2').click({ force: true });
+    await page.locator('.header').click();
 
-		// Wait for work to finish, should enter rest
-		await expect(page.getByTestId('phase-label')).toHaveText('Rest', { timeout: 7000 });
-		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+    await page.getByTestId('play-button').click();
 
-		// Wait for rest to finish, should enter rep 2 work
-		await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
-		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 2 / 2');
+    // Should start in work phase, rep 1
+    await expect(page.getByTestId('phase-label')).toHaveText('Work');
+    await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
 
-		// Wait for final rep to finish
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+    // Wait for work to finish, should enter rest
+    await expect(page.getByTestId('phase-label')).toHaveText('Rest', { timeout: 7000 });
+    await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
 
-		const app = page.locator('.app');
-		await expect(app).toHaveClass(/finished/);
-	});
+    // Wait for rest to finish, should enter rep 2 work
+    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
+    await expect(page.getByTestId('rep-counter')).toHaveText('Rep 2 / 2');
 
-	test('no rep counter for single rep', async ({ page }) => {
-		await expect(page.getByTestId('rep-counter')).not.toBeVisible();
-		await expect(page.getByTestId('phase-label')).not.toBeVisible();
-	});
+    // Wait for final rep to finish
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
 
-	test('full-screen green background during work phase', async ({ page }) => {
-		await page.getByRole('button', { name: 'Start' }).click();
-		const app = page.locator('.app');
-		await expect(app).toHaveClass(/work/);
-	});
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/finished/);
+  });
 
-	test('full-screen orange background during rest phase', async ({ page }) => {
-		const durationSlider = page.getByRole('slider', { name: 'Duration' });
-		await durationSlider.fill('1'); // 5s
-		const restSlider = page.getByRole('slider', { name: 'Rest' });
-		await restSlider.fill('1'); // 5s
-		const repsSlider = page.getByRole('slider', { name: 'Reps' });
-		await repsSlider.fill('2');
+  test('no rep counter for single rep', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('rep-counter')).not.toBeVisible();
+    await expect(page.getByTestId('phase-label')).not.toBeVisible();
+  });
 
-		await page.getByRole('button', { name: 'Start' }).click();
+  test('full-screen teal background during work phase', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/work/);
+  });
 
-		// Wait for rest phase
-		const app = page.locator('.app');
-		await expect(app).toHaveClass(/rest/, { timeout: 7000 });
-	});
+  test('full-screen coral background during rest phase', async ({ page }) => {
+    // Set work to 5s
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
 
-	test('full-screen red background when finished', async ({ page }) => {
-		const slider = page.getByRole('slider', { name: 'Duration' });
-		await slider.fill('1'); // 5s
+    // Set rest to 5s
+    await page.getByTestId('config-card-rest').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
 
-		await page.getByRole('button', { name: 'Start' }).click();
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+    // Set reps to 2
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-2').click({ force: true });
+    await page.locator('.header').click();
 
-		const app = page.locator('.app');
-		await expect(app).toHaveClass(/finished/);
-	});
+    await page.getByTestId('play-button').click();
+
+    // Wait for rest phase
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/rest/, { timeout: 7000 });
+  });
+
+  test('ruler fill covers tick marks (no visible lines through fill)', async ({ page }) => {
+    // Set work to 3:00 so the fill covers several ticks
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-180').click({ force: true });
+
+    // The fill element must have a higher z-index than the ticks
+    const fill = page.locator('.fill');
+    const tick = page.getByTestId('ruler-tick-60'); // 1:00 tick, should be covered
+    const fillZ = await fill.evaluate(el => getComputedStyle(el).zIndex);
+    const tickZ = await tick.evaluate(el => getComputedStyle(el).zIndex);
+    expect(Number(fillZ)).toBeGreaterThan(Number(tickZ));
+
+    // The fill must be positioned to actually cover ticks below it
+    const fillBox = await fill.boundingBox();
+    const tickBox = await tick.boundingBox();
+    expect(fillBox).not.toBeNull();
+    expect(tickBox).not.toBeNull();
+    // The fill bottom edge must be at or below the covered tick
+    expect(fillBox!.y + fillBox!.height).toBeGreaterThanOrEqual(tickBox!.y);
+  });
+
+  test('ruler fill covers ticks in rest picker too', async ({ page }) => {
+    // Set rest to 1:00 so the fill covers several ticks
+    await page.getByTestId('config-card-rest').click();
+    await page.getByTestId('ruler-tick-60').click({ force: true });
+
+    const fill = page.locator('.fill');
+    const tick = page.getByTestId('ruler-tick-30'); // 30s tick, should be covered
+    const fillZ = await fill.evaluate(el => getComputedStyle(el).zIndex);
+    const tickZ = await tick.evaluate(el => getComputedStyle(el).zIndex);
+    expect(Number(fillZ)).toBeGreaterThan(Number(tickZ));
+
+    const fillBox = await fill.boundingBox();
+    const tickBox = await tick.boundingBox();
+    expect(fillBox).not.toBeNull();
+    expect(tickBox).not.toBeNull();
+    expect(fillBox!.y + fillBox!.height).toBeGreaterThanOrEqual(tickBox!.y);
+  });
+
+  test('full-screen red background when finished', async ({ page }) => {
+    // Set work to 5s
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+    await page.locator('.header').click();
+
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/finished/);
+  });
 });
