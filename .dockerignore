@@ -1,0 +1,13 @@
+node_modules
+build
+.svelte-kit
+.git
+tests
+test-results
+playwright-report
+.claude/
+*.md
+.DS_Store
+.env*
+.nvmrc
+vite.config.ts.timestamp-*
