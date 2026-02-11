@@ -45,6 +45,9 @@
 	const canStart = $derived(duration > 0);
 	const isPickerDisabled = $derived($status !== 'idle');
 	const isFinished = $derived($status === 'finished');
+	const isActive = $derived($status === 'running' || $status === 'paused');
+	const isWork = $derived(isActive && $phase === 'work');
+	const isRest = $derived(isActive && $phase === 'rest');
 </script>
 
 <svelte:head>
@@ -54,12 +57,11 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </svelte:head>
 
-<main class="app" class:finished={isFinished}>
+<main class="app" class:finished={isFinished} class:work={isWork} class:rest={isRest}>
 	<h1 class="title">Gym Timer</h1>
 
 	<CountdownDisplay
 		remaining={$remaining}
-		finished={isFinished}
 		phase={$phase}
 		currentRep={$currentRep}
 		totalReps={$totalReps}
@@ -122,8 +124,35 @@
 		transition: background-color 0.3s ease;
 	}
 
+	/* Full-screen state colors */
+	.app.work {
+		background-color: var(--color-primary, #2ecc71);
+	}
+
+	.app.rest {
+		background-color: var(--color-warning, #f39c12);
+	}
+
 	.app.finished {
 		background-color: var(--color-alert, #e74c3c);
+		animation: pulse 0.6s ease-in-out infinite alternate;
+	}
+
+	/* White text on all colored backgrounds */
+	.app.work,
+	.app.rest,
+	.app.finished {
+		--color-text: #fff;
+		--color-text-muted: rgba(255, 255, 255, 0.8);
+		--color-border: rgba(255, 255, 255, 0.3);
+	}
+
+	/* Buttons: white bg + dark text on colored backgrounds */
+	.app.work :global(.control-btn),
+	.app.rest :global(.control-btn),
+	.app.finished :global(.control-btn) {
+		background: rgba(255, 255, 255, 0.9);
+		color: #2c3e50;
 	}
 
 	.title {
@@ -133,7 +162,12 @@
 		margin: 0;
 	}
 
-	.finished .title {
-		color: #fff;
+	@keyframes pulse {
+		from {
+			background-color: var(--color-alert, #e74c3c);
+		}
+		to {
+			background-color: var(--color-alert-bright, #ff6b6b);
+		}
 	}
 </style>

@@ -4,19 +4,18 @@
 
 	interface Props {
 		remaining: number;
-		finished: boolean;
 		phase?: TimerPhase;
 		currentRep?: number;
 		totalReps?: number;
 	}
 
-	let { remaining, finished, phase = 'work', currentRep = 1, totalReps = 1 }: Props = $props();
+	let { remaining, phase = 'work', currentRep = 1, totalReps = 1 }: Props = $props();
 
 	const showRepInfo = $derived(totalReps > 1);
 	const phaseLabel = $derived(phase === 'work' ? 'Work' : 'Rest');
 </script>
 
-<div class="countdown-display" class:finished class:resting={phase === 'rest'} aria-live="polite" aria-label="Time remaining">
+<div class="countdown-display" aria-live="polite" aria-label="Time remaining">
 	{#if showRepInfo}
 		<span class="phase-label" data-testid="phase-label">{phaseLabel}</span>
 	{/if}
@@ -33,17 +32,6 @@
 		align-items: center;
 		justify-content: center;
 		padding: 2rem;
-		border-radius: 16px;
-		transition: background-color 0.3s ease;
-	}
-
-	.countdown-display.finished {
-		animation: pulse 0.6s ease-in-out infinite alternate;
-		background-color: var(--color-alert, #e74c3c);
-	}
-
-	.countdown-display.resting {
-		background-color: var(--color-warning, #f39c12);
 	}
 
 	.time {
@@ -54,10 +42,6 @@
 		color: var(--color-text, #333);
 	}
 
-	.finished .time {
-		color: #fff;
-	}
-
 	.phase-label {
 		font-size: 1.25rem;
 		font-weight: 600;
@@ -66,35 +50,10 @@
 		color: var(--color-text-muted, #888);
 	}
 
-	.resting .phase-label {
-		color: #fff;
-	}
-
-	.finished .phase-label {
-		color: #fff;
-	}
-
 	.rep-counter {
 		font-size: 1.1rem;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 		color: var(--color-text-muted, #888);
-	}
-
-	.resting .rep-counter {
-		color: #fff;
-	}
-
-	.finished .rep-counter {
-		color: #fff;
-	}
-
-	@keyframes pulse {
-		from {
-			background-color: var(--color-alert, #e74c3c);
-		}
-		to {
-			background-color: var(--color-alert-bright, #ff6b6b);
-		}
 	}
 </style>

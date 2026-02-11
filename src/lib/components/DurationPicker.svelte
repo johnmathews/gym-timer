@@ -11,13 +11,42 @@
 
 	let { duration = $bindable(0), rest = $bindable(0), reps = $bindable(1), disabled = false, onchange }: Props = $props();
 
+	// Non-linear stops: dense at low values, sparse at high values
+	const DURATION_STOPS = [
+		0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+		70, 80, 90, 100, 110, 120,
+		150, 180, 210, 240, 270, 300
+	];
+	const REST_STOPS = [
+		0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+		70, 80, 90, 100, 110, 120
+	];
+
+	function valueToIndex(value: number, stops: number[]): number {
+		let closest = 0;
+		let minDiff = Math.abs(value - stops[0]);
+		for (let i = 1; i < stops.length; i++) {
+			const diff = Math.abs(value - stops[i]);
+			if (diff < minDiff) {
+				minDiff = diff;
+				closest = i;
+			}
+		}
+		return closest;
+	}
+
+	const durationIndex = $derived(valueToIndex(duration, DURATION_STOPS));
+	const restIndex = $derived(valueToIndex(rest, REST_STOPS));
+
 	function handleDurationInput(e: Event) {
-		duration = parseInt((e.target as HTMLInputElement).value, 10);
+		const idx = parseInt((e.target as HTMLInputElement).value, 10);
+		duration = DURATION_STOPS[idx];
 		onchange?.(duration, rest, reps);
 	}
 
 	function handleRestInput(e: Event) {
-		rest = parseInt((e.target as HTMLInputElement).value, 10);
+		const idx = parseInt((e.target as HTMLInputElement).value, 10);
+		rest = REST_STOPS[idx];
 		onchange?.(duration, rest, reps);
 	}
 
@@ -31,12 +60,13 @@
 	<input
 		type="range"
 		min="0"
-		max="300"
-		step="5"
-		value={duration}
+		max={DURATION_STOPS.length - 1}
+		step="1"
+		value={durationIndex}
 		oninput={handleDurationInput}
 		{disabled}
 		aria-label="Duration"
+		aria-valuetext={formatTime(duration)}
 		class="slider"
 	/>
 	<span class="slider-value">{formatTime(duration)}</span>
@@ -44,12 +74,13 @@
 	<input
 		type="range"
 		min="0"
-		max="120"
-		step="5"
-		value={rest}
+		max={REST_STOPS.length - 1}
+		step="1"
+		value={restIndex}
 		oninput={handleRestInput}
 		{disabled}
 		aria-label="Rest"
+		aria-valuetext={formatTime(rest)}
 		class="slider"
 	/>
 	<span class="slider-value">Rest {formatTime(rest)}</span>

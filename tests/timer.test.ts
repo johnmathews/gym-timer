@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+// Duration stops: [0,5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120,150,180,210,240,270,300]
+// Index 1 = 5s, Index 6 = 30s
+// Rest stops: [0,5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100,110,120]
+// Index 1 = 5s
+
 test.describe('Gym Timer', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
@@ -9,19 +14,18 @@ test.describe('Gym Timer', () => {
 		await expect(page.getByRole('heading', { name: 'Gym Timer' })).toBeVisible();
 	});
 
-	test('has a single duration slider', async ({ page }) => {
+	test('has a duration slider with non-linear stops', async ({ page }) => {
 		const slider = page.getByRole('slider', { name: 'Duration' });
 		await expect(slider).toBeVisible();
 		await expect(slider).toHaveAttribute('min', '0');
-		await expect(slider).toHaveAttribute('max', '300');
+		await expect(slider).toHaveAttribute('max', '24');
 	});
 
-	test('has a rest slider', async ({ page }) => {
+	test('has a rest slider with non-linear stops', async ({ page }) => {
 		const slider = page.getByRole('slider', { name: 'Rest' });
 		await expect(slider).toBeVisible();
 		await expect(slider).toHaveAttribute('min', '0');
-		await expect(slider).toHaveAttribute('max', '120');
-		await expect(slider).toHaveAttribute('step', '5');
+		await expect(slider).toHaveAttribute('max', '18');
 	});
 
 	test('has a reps slider', async ({ page }) => {
@@ -53,7 +57,7 @@ test.describe('Gym Timer', () => {
 
 	test('can set duration via slider and start timer', async ({ page }) => {
 		const slider = page.getByRole('slider', { name: 'Duration' });
-		await slider.fill('5');
+		await slider.fill('1'); // index 1 = 5 seconds
 
 		await page.getByRole('button', { name: 'Start' }).click();
 
@@ -71,14 +75,14 @@ test.describe('Gym Timer', () => {
 
 	test('counts down and finishes with alert', async ({ page }) => {
 		const slider = page.getByRole('slider', { name: 'Duration' });
-		await slider.fill('5');
+		await slider.fill('1'); // index 1 = 5 seconds
 
 		await page.getByRole('button', { name: 'Start' }).click();
 
 		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
 
-		const display = page.locator('.countdown-display');
-		await expect(display).toHaveClass(/finished/);
+		const app = page.locator('.app');
+		await expect(app).toHaveClass(/finished/);
 	});
 
 	test('pause and resume works', async ({ page }) => {
@@ -117,13 +121,11 @@ test.describe('Gym Timer', () => {
 	});
 
 	test('rep counter shown during multi-rep workout', async ({ page }) => {
-		// Set reps to 2
 		const repsSlider = page.getByRole('slider', { name: 'Reps' });
 		await repsSlider.fill('2');
 		const durationSlider = page.getByRole('slider', { name: 'Duration' });
-		await durationSlider.fill('5');
+		await durationSlider.fill('1'); // index 1 = 5s
 
-		// Rep counter should be visible before starting
 		await expect(page.getByTestId('rep-counter')).toBeVisible();
 		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
 		await expect(page.getByTestId('phase-label')).toHaveText('Work');
@@ -131,9 +133,9 @@ test.describe('Gym Timer', () => {
 
 	test('multi-rep with rest cycles through both reps', async ({ page }) => {
 		const durationSlider = page.getByRole('slider', { name: 'Duration' });
-		await durationSlider.fill('5');
+		await durationSlider.fill('1'); // index 1 = 5s
 		const restSlider = page.getByRole('slider', { name: 'Rest' });
-		await restSlider.fill('5');
+		await restSlider.fill('1'); // index 1 = 5s
 		const repsSlider = page.getByRole('slider', { name: 'Reps' });
 		await repsSlider.fill('2');
 
@@ -154,13 +156,44 @@ test.describe('Gym Timer', () => {
 		// Wait for final rep to finish
 		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
 
-		const display = page.locator('.countdown-display');
-		await expect(display).toHaveClass(/finished/);
+		const app = page.locator('.app');
+		await expect(app).toHaveClass(/finished/);
 	});
 
 	test('no rep counter for single rep', async ({ page }) => {
-		// Default reps=1, should not show rep counter
 		await expect(page.getByTestId('rep-counter')).not.toBeVisible();
 		await expect(page.getByTestId('phase-label')).not.toBeVisible();
+	});
+
+	test('full-screen green background during work phase', async ({ page }) => {
+		await page.getByRole('button', { name: 'Start' }).click();
+		const app = page.locator('.app');
+		await expect(app).toHaveClass(/work/);
+	});
+
+	test('full-screen orange background during rest phase', async ({ page }) => {
+		const durationSlider = page.getByRole('slider', { name: 'Duration' });
+		await durationSlider.fill('1'); // 5s
+		const restSlider = page.getByRole('slider', { name: 'Rest' });
+		await restSlider.fill('1'); // 5s
+		const repsSlider = page.getByRole('slider', { name: 'Reps' });
+		await repsSlider.fill('2');
+
+		await page.getByRole('button', { name: 'Start' }).click();
+
+		// Wait for rest phase
+		const app = page.locator('.app');
+		await expect(app).toHaveClass(/rest/, { timeout: 7000 });
+	});
+
+	test('full-screen red background when finished', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Duration' });
+		await slider.fill('1'); // 5s
+
+		await page.getByRole('button', { name: 'Start' }).click();
+		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+
+		const app = page.locator('.app');
+		await expect(app).toHaveClass(/finished/);
 	});
 });
