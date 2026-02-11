@@ -9,8 +9,8 @@
  const { remaining, status, phase, currentRep, totalReps } = timer;
 
  let duration = $state(30);
- let rest = $state(0);
- let reps = $state(1);
+ let rest = $state(15);
+ let reps = $state(3);
  let prevStatus: string = "idle";
 
  onMount(() => {
