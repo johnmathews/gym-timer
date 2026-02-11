@@ -3,15 +3,27 @@
 
 	interface Props {
 		duration: number;
+		rest: number;
+		reps: number;
 		disabled?: boolean;
-		onchange?: (duration: number) => void;
+		onchange?: (duration: number, rest: number, reps: number) => void;
 	}
 
-	let { duration = $bindable(0), disabled = false, onchange }: Props = $props();
+	let { duration = $bindable(0), rest = $bindable(0), reps = $bindable(1), disabled = false, onchange }: Props = $props();
 
-	function handleInput(e: Event) {
+	function handleDurationInput(e: Event) {
 		duration = parseInt((e.target as HTMLInputElement).value, 10);
-		onchange?.(duration);
+		onchange?.(duration, rest, reps);
+	}
+
+	function handleRestInput(e: Event) {
+		rest = parseInt((e.target as HTMLInputElement).value, 10);
+		onchange?.(duration, rest, reps);
+	}
+
+	function handleRepsInput(e: Event) {
+		reps = parseInt((e.target as HTMLInputElement).value, 10);
+		onchange?.(duration, rest, reps);
 	}
 </script>
 
@@ -22,12 +34,38 @@
 		max="300"
 		step="5"
 		value={duration}
-		oninput={handleInput}
+		oninput={handleDurationInput}
 		{disabled}
 		aria-label="Duration"
 		class="slider"
 	/>
 	<span class="slider-value">{formatTime(duration)}</span>
+
+	<input
+		type="range"
+		min="0"
+		max="120"
+		step="5"
+		value={rest}
+		oninput={handleRestInput}
+		{disabled}
+		aria-label="Rest"
+		class="slider"
+	/>
+	<span class="slider-value">Rest {formatTime(rest)}</span>
+
+	<input
+		type="range"
+		min="0"
+		max="10"
+		step="1"
+		value={reps}
+		oninput={handleRepsInput}
+		{disabled}
+		aria-label="Reps"
+		class="slider"
+	/>
+	<span class="slider-value">Reps {reps}</span>
 </div>
 
 <style>

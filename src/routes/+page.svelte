@@ -6,28 +6,30 @@
 	import TimerControls from '$lib/components/TimerControls.svelte';
 
 	const timer = createTimer();
-	const { remaining, status } = timer;
+	const { remaining, status, phase, currentRep, totalReps } = timer;
 
 	let duration = $state(30);
+	let rest = $state(0);
+	let reps = $state(1);
 	let prevStatus: string = 'idle';
 
 	onMount(() => {
-		timer.setDurationSeconds(duration);
+		timer.configure(duration, rest, reps);
 	});
 
 	onDestroy(() => {
 		timer.destroy();
 	});
 
-	function handleDurationChange(d: number) {
-		timer.setDurationSeconds(d);
+	function handlePickerChange(d: number, r: number, p: number) {
+		timer.configure(d, r, p);
 	}
 
 	function handleStart() {
 		let currentStatus: string;
 		status.subscribe((v) => (currentStatus = v))();
 		if (currentStatus! === 'idle') {
-			timer.setDurationSeconds(duration);
+			timer.configure(duration, rest, reps);
 		}
 		timer.start();
 	}
@@ -55,12 +57,20 @@
 <main class="app" class:finished={isFinished}>
 	<h1 class="title">Gym Timer</h1>
 
-	<CountdownDisplay remaining={$remaining} finished={isFinished} />
+	<CountdownDisplay
+		remaining={$remaining}
+		finished={isFinished}
+		phase={$phase}
+		currentRep={$currentRep}
+		totalReps={$totalReps}
+	/>
 
 	<DurationPicker
 		bind:duration
+		bind:rest
+		bind:reps
 		disabled={isPickerDisabled}
-		onchange={handleDurationChange}
+		onchange={handlePickerChange}
 	/>
 
 	<TimerControls

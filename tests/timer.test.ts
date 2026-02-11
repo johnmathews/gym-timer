@@ -16,6 +16,22 @@ test.describe('Gym Timer', () => {
 		await expect(slider).toHaveAttribute('max', '300');
 	});
 
+	test('has a rest slider', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Rest' });
+		await expect(slider).toBeVisible();
+		await expect(slider).toHaveAttribute('min', '0');
+		await expect(slider).toHaveAttribute('max', '120');
+		await expect(slider).toHaveAttribute('step', '5');
+	});
+
+	test('has a reps slider', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Reps' });
+		await expect(slider).toBeVisible();
+		await expect(slider).toHaveAttribute('min', '0');
+		await expect(slider).toHaveAttribute('max', '10');
+		await expect(slider).toHaveAttribute('step', '1');
+	});
+
 	test('default duration is 30 seconds', async ({ page }) => {
 		await expect(page.getByTestId('countdown-time')).toHaveText('00:30');
 	});
@@ -46,9 +62,11 @@ test.describe('Gym Timer', () => {
 		await expect(page.getByRole('button', { name: 'Start' })).not.toBeVisible();
 	});
 
-	test('slider is disabled while timer is running', async ({ page }) => {
+	test('all sliders are disabled while timer is running', async ({ page }) => {
 		await page.getByRole('button', { name: 'Start' }).click();
 		await expect(page.getByRole('slider', { name: 'Duration' })).toBeDisabled();
+		await expect(page.getByRole('slider', { name: 'Rest' })).toBeDisabled();
+		await expect(page.getByRole('slider', { name: 'Reps' })).toBeDisabled();
 	});
 
 	test('counts down and finishes with alert', async ({ page }) => {
@@ -96,5 +114,53 @@ test.describe('Gym Timer', () => {
 		const box = await app.boundingBox();
 		expect(box).not.toBeNull();
 		expect(box!.width).toBeGreaterThanOrEqual(1280 - 1);
+	});
+
+	test('rep counter shown during multi-rep workout', async ({ page }) => {
+		// Set reps to 2
+		const repsSlider = page.getByRole('slider', { name: 'Reps' });
+		await repsSlider.fill('2');
+		const durationSlider = page.getByRole('slider', { name: 'Duration' });
+		await durationSlider.fill('5');
+
+		// Rep counter should be visible before starting
+		await expect(page.getByTestId('rep-counter')).toBeVisible();
+		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+		await expect(page.getByTestId('phase-label')).toHaveText('Work');
+	});
+
+	test('multi-rep with rest cycles through both reps', async ({ page }) => {
+		const durationSlider = page.getByRole('slider', { name: 'Duration' });
+		await durationSlider.fill('5');
+		const restSlider = page.getByRole('slider', { name: 'Rest' });
+		await restSlider.fill('5');
+		const repsSlider = page.getByRole('slider', { name: 'Reps' });
+		await repsSlider.fill('2');
+
+		await page.getByRole('button', { name: 'Start' }).click();
+
+		// Should start in work phase, rep 1
+		await expect(page.getByTestId('phase-label')).toHaveText('Work');
+		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+
+		// Wait for work to finish, should enter rest
+		await expect(page.getByTestId('phase-label')).toHaveText('Rest', { timeout: 7000 });
+		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 1 / 2');
+
+		// Wait for rest to finish, should enter rep 2 work
+		await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
+		await expect(page.getByTestId('rep-counter')).toHaveText('Rep 2 / 2');
+
+		// Wait for final rep to finish
+		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
+
+		const display = page.locator('.countdown-display');
+		await expect(display).toHaveClass(/finished/);
+	});
+
+	test('no rep counter for single rep', async ({ page }) => {
+		// Default reps=1, should not show rep counter
+		await expect(page.getByTestId('rep-counter')).not.toBeVisible();
+		await expect(page.getByTestId('phase-label')).not.toBeVisible();
 	});
 });
