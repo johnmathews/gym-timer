@@ -1,8 +1,8 @@
 # Gym Timer
 
-A simple gym workout timer web app. Set a duration, start the countdown, and get an audio + visual alert when time's up.
+A simple gym workout timer web app. Slide to set a duration (up to 5 minutes), start the countdown, and get an audio + visual alert when time's up.
 
-Built with SvelteKit as a static site, optimized for mobile/iOS.
+Built with SvelteKit as a static site, designed for touch interfaces and optimized for mobile/iOS.
 
 ## Setup
 

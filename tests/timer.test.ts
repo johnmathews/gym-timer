@@ -9,9 +9,22 @@ test.describe('Gym Timer', () => {
 		await expect(page.getByRole('heading', { name: 'Gym Timer' })).toBeVisible();
 	});
 
-	test('has duration picker with default values', async ({ page }) => {
-		await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toBeVisible();
-		await expect(page.getByRole('spinbutton', { name: 'Seconds' })).toBeVisible();
+	test('has a single duration slider', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Duration' });
+		await expect(slider).toBeVisible();
+		await expect(slider).toHaveAttribute('min', '0');
+		await expect(slider).toHaveAttribute('max', '300');
+	});
+
+	test('default duration is 30 seconds', async ({ page }) => {
+		await expect(page.getByTestId('countdown-time')).toHaveText('00:30');
+	});
+
+	test('slider is touch-friendly (at least 44px tall)', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Duration' });
+		const box = await slider.boundingBox();
+		expect(box).not.toBeNull();
+		expect(box!.height).toBeGreaterThanOrEqual(44);
 	});
 
 	test('shows start button initially', async ({ page }) => {
@@ -22,92 +35,66 @@ test.describe('Gym Timer', () => {
 		await expect(page.getByRole('button', { name: 'Reset' })).not.toBeVisible();
 	});
 
-	test('can set duration and start timer', async ({ page }) => {
-		const minutesInput = page.getByRole('spinbutton', { name: 'Minutes' });
-		const secondsInput = page.getByRole('spinbutton', { name: 'Seconds' });
-
-		await minutesInput.fill('0');
-		await secondsInput.fill('3');
+	test('can set duration via slider and start timer', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Duration' });
+		await slider.fill('5');
 
 		await page.getByRole('button', { name: 'Start' }).click();
 
-		// Should show Pause and Reset buttons
 		await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Reset' })).toBeVisible();
-
-		// Start should no longer be visible
 		await expect(page.getByRole('button', { name: 'Start' })).not.toBeVisible();
 	});
 
-	test('counts down and finishes with alert', async ({ page }) => {
-		const minutesInput = page.getByRole('spinbutton', { name: 'Minutes' });
-		const secondsInput = page.getByRole('spinbutton', { name: 'Seconds' });
+	test('slider is disabled while timer is running', async ({ page }) => {
+		await page.getByRole('button', { name: 'Start' }).click();
+		await expect(page.getByRole('slider', { name: 'Duration' })).toBeDisabled();
+	});
 
-		await minutesInput.fill('0');
-		await secondsInput.fill('3');
+	test('counts down and finishes with alert', async ({ page }) => {
+		const slider = page.getByRole('slider', { name: 'Duration' });
+		await slider.fill('5');
 
 		await page.getByRole('button', { name: 'Start' }).click();
 
-		// Wait for timer to finish (3 seconds + buffer)
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 5000 });
+		await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 7000 });
 
-		// Check finished state — the display should have the 'finished' class
 		const display = page.locator('.countdown-display');
 		await expect(display).toHaveClass(/finished/);
 	});
 
 	test('pause and resume works', async ({ page }) => {
-		const minutesInput = page.getByRole('spinbutton', { name: 'Minutes' });
-		const secondsInput = page.getByRole('spinbutton', { name: 'Seconds' });
-
-		await minutesInput.fill('0');
-		await secondsInput.fill('10');
-
 		await page.getByRole('button', { name: 'Start' }).click();
-
-		// Wait 2 seconds
 		await page.waitForTimeout(2000);
 
-		// Pause
 		await page.getByRole('button', { name: 'Pause' }).click();
 		await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
 
-		// Capture the time
 		const timeText = await page.getByTestId('countdown-time').textContent();
-
-		// Wait another second — time should not change
 		await page.waitForTimeout(1200);
 		await expect(page.getByTestId('countdown-time')).toHaveText(timeText!);
 
-		// Resume
 		await page.getByRole('button', { name: 'Resume' }).click();
 		await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
 	});
 
 	test('reset returns to original duration', async ({ page }) => {
-		const minutesInput = page.getByRole('spinbutton', { name: 'Minutes' });
-		const secondsInput = page.getByRole('spinbutton', { name: 'Seconds' });
-
-		await minutesInput.fill('0');
-		await secondsInput.fill('10');
-
 		await page.getByRole('button', { name: 'Start' }).click();
 		await page.waitForTimeout(2000);
 
 		await page.getByRole('button', { name: 'Reset' }).click();
 
-		await expect(page.getByTestId('countdown-time')).toHaveText('00:10');
+		await expect(page.getByTestId('countdown-time')).toHaveText('00:30');
 		await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
 	});
 
-	test('increment/decrement buttons work', async ({ page }) => {
-		await page.getByLabel('Increase minutes').click();
-		await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveValue('2');
+	test('app fills the full viewport width on a laptop-sized screen', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await page.goto('/');
 
-		await page.getByLabel('Decrease minutes').click();
-		await expect(page.getByRole('spinbutton', { name: 'Minutes' })).toHaveValue('1');
-
-		await page.getByLabel('Increase seconds').click();
-		await expect(page.getByRole('spinbutton', { name: 'Seconds' })).toHaveValue('1');
+		const app = page.locator('.app');
+		const box = await app.boundingBox();
+		expect(box).not.toBeNull();
+		expect(box!.width).toBeGreaterThanOrEqual(1280 - 1);
 	});
 });

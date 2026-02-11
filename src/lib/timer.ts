@@ -33,6 +33,13 @@ export function createTimer() {
 		clearTick();
 	}
 
+	function setDurationSeconds(secs: number) {
+		duration.set(secs);
+		remaining.set(secs);
+		status.set('idle');
+		clearTick();
+	}
+
 	function start() {
 		let currentRemaining: number;
 		remaining.subscribe((v) => (currentRemaining = v))();
@@ -84,6 +91,7 @@ export function createTimer() {
 		remaining: { subscribe: remaining.subscribe } as Readable<number>,
 		status: { subscribe: status.subscribe } as Readable<TimerStatus>,
 		setDuration,
+		setDurationSeconds,
 		start,
 		pause,
 		reset,

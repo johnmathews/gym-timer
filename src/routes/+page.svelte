@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { createTimer, playAlertSound, totalSeconds } from '$lib/timer';
+	import { createTimer, playAlertSound } from '$lib/timer';
 	import DurationPicker from '$lib/components/DurationPicker.svelte';
 	import CountdownDisplay from '$lib/components/CountdownDisplay.svelte';
 	import TimerControls from '$lib/components/TimerControls.svelte';
@@ -8,29 +8,26 @@
 	const timer = createTimer();
 	const { remaining, status } = timer;
 
-	let minutes = $state(1);
-	let seconds = $state(0);
+	let duration = $state(30);
 	let prevStatus: string = 'idle';
 
-	// Sync initial duration
 	onMount(() => {
-		timer.setDuration(minutes, seconds);
+		timer.setDurationSeconds(duration);
 	});
 
 	onDestroy(() => {
 		timer.destroy();
 	});
 
-	function handleDurationChange(m: number, s: number) {
-		timer.setDuration(m, s);
+	function handleDurationChange(d: number) {
+		timer.setDurationSeconds(d);
 	}
 
 	function handleStart() {
-		// Re-sync duration in case picker changed while idle
 		let currentStatus: string;
 		status.subscribe((v) => (currentStatus = v))();
 		if (currentStatus! === 'idle') {
-			timer.setDuration(minutes, seconds);
+			timer.setDurationSeconds(duration);
 		}
 		timer.start();
 	}
@@ -43,7 +40,7 @@
 		prevStatus = s;
 	});
 
-	const canStart = $derived(totalSeconds(minutes, seconds) > 0);
+	const canStart = $derived(duration > 0);
 	const isPickerDisabled = $derived($status !== 'idle');
 	const isFinished = $derived($status === 'finished');
 </script>
@@ -61,8 +58,7 @@
 	<CountdownDisplay remaining={$remaining} finished={isFinished} />
 
 	<DurationPicker
-		bind:minutes
-		bind:seconds
+		bind:duration
 		disabled={isPickerDisabled}
 		onchange={handleDurationChange}
 	/>
@@ -105,8 +101,7 @@
 	}
 
 	.app {
-		max-width: 400px;
-		margin: 0 auto;
+		width: 100%;
 		padding: 2rem 1rem;
 		min-height: 100dvh;
 		display: flex;
