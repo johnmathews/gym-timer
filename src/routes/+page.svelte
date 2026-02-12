@@ -199,8 +199,8 @@
     </div>
 
     <div class="toolbar">
-      <VolumeControl />
       <FullscreenButton />
+      <VolumeControl />
     </div>
 
     <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
@@ -352,9 +352,8 @@
 
   .toolbar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
-    gap: 16px;
     width: 100%;
     padding: 12px 0;
   }

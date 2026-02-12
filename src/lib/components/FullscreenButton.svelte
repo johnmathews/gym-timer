@@ -1,53 +1,66 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
 
-  let supported = $state(false);
   let isFullscreen = $state(false);
 
+  function getFullscreenElement(): Element | null {
+    return document.fullscreenElement
+      || (document as any).webkitFullscreenElement
+      || null;
+  }
+
   function handleChange() {
-    isFullscreen = !!document.fullscreenElement;
+    isFullscreen = !!getFullscreenElement();
   }
 
   onMount(() => {
-    supported = !!document.fullscreenEnabled;
-    isFullscreen = !!document.fullscreenElement;
+    isFullscreen = !!getFullscreenElement();
     document.addEventListener("fullscreenchange", handleChange);
+    document.addEventListener("webkitfullscreenchange", handleChange);
   });
 
   onDestroy(() => {
     if (typeof document !== "undefined") {
       document.removeEventListener("fullscreenchange", handleChange);
+      document.removeEventListener("webkitfullscreenchange", handleChange);
     }
   });
 
   function toggle() {
     if (isFullscreen) {
-      document.exitFullscreen();
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
     } else {
-      document.documentElement.requestFullscreen();
+      const el = document.documentElement as any;
+      if (el.requestFullscreen) {
+        el.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      }
     }
   }
 </script>
 
-{#if supported}
-  <button class="fullscreen-btn" onclick={toggle} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      {#if isFullscreen}
-        <!-- Compress arrows -->
-        <polyline points="4,14 10,14 10,20" />
-        <polyline points="20,10 14,10 14,4" />
-        <line x1="14" y1="10" x2="21" y2="3" />
-        <line x1="3" y1="21" x2="10" y2="14" />
-      {:else}
-        <!-- Expand arrows -->
-        <polyline points="15,3 21,3 21,9" />
-        <polyline points="9,21 3,21 3,15" />
-        <line x1="21" y1="3" x2="14" y2="10" />
-        <line x1="3" y1="21" x2="10" y2="14" />
-      {/if}
-    </svg>
-  </button>
-{/if}
+<button class="fullscreen-btn" onclick={toggle} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    {#if isFullscreen}
+      <!-- Compress arrows -->
+      <polyline points="4,14 10,14 10,20" />
+      <polyline points="20,10 14,10 14,4" />
+      <line x1="14" y1="10" x2="21" y2="3" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    {:else}
+      <!-- Expand arrows -->
+      <polyline points="15,3 21,3 21,9" />
+      <polyline points="9,21 3,21 3,15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    {/if}
+  </svg>
+</button>
 
 <style>
   .fullscreen-btn {
