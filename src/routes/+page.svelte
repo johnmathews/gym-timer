@@ -358,7 +358,7 @@
   }
 
   .app.rest {
-    background-color: #E8450E;
+    background-color: #FFBA08;
   }
 
   .app.paused {
@@ -447,7 +447,7 @@
   }
 
   .app.rest .pause-btn svg {
-    color: #E8450E;
+    color: #FFBA08;
   }
 
   .play-active-btn {
