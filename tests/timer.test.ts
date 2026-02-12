@@ -490,8 +490,9 @@ test.describe('Gym Timer', () => {
     expect(stored).toBe('0.5');
   });
 
-  test('volume and fullscreen icons hidden during active timer', async ({ page }) => {
+  test('volume and fullscreen icons visible during active timer', async ({ page }) => {
     await page.getByTestId('play-button').click();
-    await expect(page.getByLabel('Volume')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Volume' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enter fullscreen' })).toBeVisible();
   });
 });

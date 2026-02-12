@@ -207,7 +207,7 @@ function playTone(
   freq: number,
   start: number,
   duration: number,
-  volume = 0.6,
+  volume = 1.0,
 ): void {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -228,9 +228,9 @@ export function playFinishSound() {
   try {
     const ctx = new AudioContext();
     const t = ctx.currentTime;
-    playTone(ctx, 523, t, 0.3, 0.6);
-    playTone(ctx, 659, t + 0.2, 0.3, 0.6);
-    playTone(ctx, 784, t + 0.4, 0.5, 0.7);
+    playTone(ctx, 523, t, 0.3, 1.0);
+    playTone(ctx, 659, t + 0.2, 0.3, 1.0);
+    playTone(ctx, 784, t + 0.4, 0.5, 1.0);
     setTimeout(() => ctx.close(), 2000);
   } catch {
     // Web Audio API not available
@@ -242,8 +242,8 @@ export function playRestStartSound() {
   try {
     const ctx = new AudioContext();
     const t = ctx.currentTime;
-    playTone(ctx, 784, t, 0.25, 0.6);
-    playTone(ctx, 523, t + 0.2, 0.35, 0.6);
+    playTone(ctx, 784, t, 0.25, 1.0);
+    playTone(ctx, 523, t + 0.2, 0.35, 1.0);
     setTimeout(() => ctx.close(), 1500);
   } catch {
     // Web Audio API not available
@@ -256,9 +256,9 @@ export function playWorkStartSound() {
     const ctx = new AudioContext();
     const t = ctx.currentTime;
     // Bright bell tones (octave higher for energy)
-    playTone(ctx, 1047, t, 0.15, 0.5);       // C6
-    playTone(ctx, 1319, t + 0.08, 0.15, 0.5); // E6
-    playTone(ctx, 1568, t + 0.16, 0.3, 0.6);  // G6 (ring longer)
+    playTone(ctx, 1047, t, 0.15, 0.9);       // C6
+    playTone(ctx, 1319, t + 0.08, 0.15, 0.9); // E6
+    playTone(ctx, 1568, t + 0.16, 0.3, 1.0);  // G6 (ring longer)
     setTimeout(() => ctx.close(), 1500);
   } catch {
     // Web Audio API not available

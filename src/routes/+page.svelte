@@ -89,8 +89,9 @@
   const isRest = $derived(isRunning && $phase === "rest");
 
   function handleScreenTap(e: MouseEvent) {
-    // Don't handle taps on buttons
+    // Don't handle taps on buttons or toolbar controls
     if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest(".active-toolbar")) return;
     if ($status === "running") {
       log("ui:pause");
       timer.pause();
@@ -251,10 +252,12 @@
     <!-- Running / Paused / Finished -->
     <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
     <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
+      <div class="active-toolbar">
+        <FullscreenButton />
+        <VolumeControl />
+      </div>
       {#if !isPaused}
         <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
-      {:else}
-        <div class="spacer-top"></div>
       {/if}
 
       <div class="countdown-area">
@@ -406,8 +409,14 @@
     min-height: 100dvh;
   }
 
-  .spacer-top {
-    height: max(16px, env(safe-area-inset-top));
+  .active-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px 0;
+    padding-top: max(12px, env(safe-area-inset-top));
+    flex-shrink: 0;
   }
 
   .countdown-area {
