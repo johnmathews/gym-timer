@@ -152,17 +152,17 @@ describe("createTimer", () => {
 
     expect(get(timer.phase)).toBe("getReady");
     vi.advanceTimersByTime(1000);
-    expect(get(timer.remaining)).toBe(2);
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION - 1);
 
     timer.pause();
     expect(get(timer.status)).toBe("paused");
     expect(get(timer.phase)).toBe("getReady");
 
     vi.advanceTimersByTime(5000);
-    expect(get(timer.remaining)).toBe(2); // didn't change
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION - 1); // didn't change
 
     timer.start();
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime((GET_READY_DURATION - 1) * 1000);
     // Should have transitioned to work
     expect(get(timer.phase)).toBe("work");
 
@@ -413,7 +413,7 @@ describe("configure and multi-round", () => {
 });
 
 describe("GET_READY_DURATION constant", () => {
-  it("is exported and equals 3", () => {
-    expect(GET_READY_DURATION).toBe(3);
+  it("is exported and equals 5", () => {
+    expect(GET_READY_DURATION).toBe(5);
   });
 });

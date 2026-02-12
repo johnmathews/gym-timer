@@ -4,7 +4,7 @@ import { log } from "./logger";
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
 export type TimerPhase = "getReady" | "work" | "rest";
 
-export const GET_READY_DURATION = 3;
+export const GET_READY_DURATION = 5;
 
 export function formatTime(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60);

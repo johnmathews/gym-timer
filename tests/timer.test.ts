@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-// GET_READY_DURATION is 3 seconds
-const GET_READY_MS = 3000;
+// GET_READY_DURATION is 5 seconds
+const GET_READY_MS = 5000;
 
 test.describe('Gym Timer', () => {
   test.beforeEach(async ({ page }) => {
@@ -71,7 +71,7 @@ test.describe('Gym Timer', () => {
     await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
 
     // Wait for getReady to finish, should enter work
-    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 5000 });
+    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
   });
 
   test('tapping screen pauses timer', async ({ page }) => {
@@ -109,8 +109,8 @@ test.describe('Gym Timer', () => {
 
     await page.getByTestId('play-button').click();
 
-    // Wait for getReady + work (3 + 5 = 8s)
-    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 10000 });
+    // Wait for getReady + work (5 + 5 = 10s)
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
 
     const app = page.locator('.app');
     await expect(app).toHaveClass(/finished/);
@@ -190,7 +190,7 @@ test.describe('Gym Timer', () => {
     await page.getByTestId('play-button').click();
 
     // Wait for getReady to finish
-    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 5000 });
+    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
     await expect(page.getByTestId('rep-counter')).toBeVisible();
     await expect(page.getByTestId('rep-counter')).toHaveText('1/2');
     await expect(page.getByTestId('progress-bar')).toBeVisible();
@@ -215,7 +215,7 @@ test.describe('Gym Timer', () => {
     await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
 
     // Wait for work phase, rep 1
-    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 5000 });
+    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
     await expect(page.getByTestId('rep-counter')).toHaveText('1/2');
 
     // Wait for work to finish, should enter rest
@@ -249,7 +249,7 @@ test.describe('Gym Timer', () => {
 
     // Wait for getReady to finish
     const app = page.locator('.app');
-    await expect(app).toHaveClass(/work/, { timeout: 5000 });
+    await expect(app).toHaveClass(/work/, { timeout: 7000 });
   });
 
   test('full-screen orange background during rest phase', async ({ page }) => {
@@ -267,9 +267,9 @@ test.describe('Gym Timer', () => {
 
     await page.getByTestId('play-button').click();
 
-    // Wait for rest phase (getReady 3s + work 5s)
+    // Wait for rest phase (getReady 5s + work 5s)
     const app = page.locator('.app');
-    await expect(app).toHaveClass(/rest/, { timeout: 10000 });
+    await expect(app).toHaveClass(/rest/, { timeout: 12000 });
   });
 
   test('ruler fill covers tick marks (no visible lines through fill)', async ({ page }) => {
@@ -318,8 +318,8 @@ test.describe('Gym Timer', () => {
     await page.getByTestId('ruler-tick-5').click({ force: true });
 
     await page.getByTestId('play-button').click();
-    // getReady 3s + work 5s = 8s
-    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 10000 });
+    // getReady 5s + work 5s = 10s
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
 
     const app = page.locator('.app');
     await expect(app).toHaveClass(/finished/);
