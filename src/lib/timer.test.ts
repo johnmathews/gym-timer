@@ -611,6 +611,8 @@ describe("sound playback", () => {
     mockGain = {
       connect: vi.fn(),
       gain: {
+        value: 1.0,
+        cancelScheduledValues: vi.fn(),
         setValueAtTime: vi.fn(),
         linearRampToValueAtTime: vi.fn(),
         exponentialRampToValueAtTime: vi.fn(),
@@ -651,33 +653,33 @@ describe("sound playback", () => {
     }
   });
 
-  it("playWorkStartSound creates oscillators and ramps gain above zero", () => {
+  it("playWorkStartSound creates oscillators and sets gain above zero", () => {
     playWorkStartSound();
     expect(mockCtx.createOscillator).toHaveBeenCalled();
     expect(mockCtx.createGain).toHaveBeenCalled();
-    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
-    expect(rampCalls.length).toBeGreaterThan(0);
-    for (const call of rampCalls) {
+    const setCalls = mockGain.gain.setValueAtTime.mock.calls;
+    expect(setCalls.length).toBeGreaterThan(0);
+    for (const call of setCalls) {
       expect(call[0]).toBeGreaterThan(0);
     }
   });
 
-  it("playRestStartSound creates oscillators and ramps gain above zero", () => {
+  it("playRestStartSound creates oscillators and sets gain above zero", () => {
     playRestStartSound();
     expect(mockCtx.createOscillator).toHaveBeenCalled();
-    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
-    expect(rampCalls.length).toBeGreaterThan(0);
-    for (const call of rampCalls) {
+    const setCalls = mockGain.gain.setValueAtTime.mock.calls;
+    expect(setCalls.length).toBeGreaterThan(0);
+    for (const call of setCalls) {
       expect(call[0]).toBeGreaterThan(0);
     }
   });
 
-  it("playFinishSound creates oscillators and ramps gain above zero", () => {
+  it("playFinishSound creates oscillators and sets gain above zero", () => {
     playFinishSound();
     expect(mockCtx.createOscillator).toHaveBeenCalled();
-    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
-    expect(rampCalls.length).toBeGreaterThan(0);
-    for (const call of rampCalls) {
+    const setCalls = mockGain.gain.setValueAtTime.mock.calls;
+    expect(setCalls.length).toBeGreaterThan(0);
+    for (const call of setCalls) {
       expect(call[0]).toBeGreaterThan(0);
     }
   });
@@ -685,8 +687,9 @@ describe("sound playback", () => {
   it("sounds respect masterVolume scaling", () => {
     setMasterVolume(0.5);
     playWorkStartSound();
-    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
-    for (const call of rampCalls) {
+    const setCalls = mockGain.gain.setValueAtTime.mock.calls;
+    expect(setCalls.length).toBeGreaterThan(0);
+    for (const call of setCalls) {
       expect(call[0]).toBeLessThanOrEqual(0.5);
       expect(call[0]).toBeGreaterThan(0);
     }
@@ -704,6 +707,11 @@ describe("sound playback", () => {
     for (const call of setValueCalls) {
       expect(call[0]).toBeGreaterThan(0);
     }
+  });
+
+  it("clears prior automation before scheduling (cancelScheduledValues)", () => {
+    playWorkStartSound();
+    expect(mockGain.gain.cancelScheduledValues).toHaveBeenCalled();
   });
 
   it("uses DynamicsCompressor when volume exceeds 1.0", () => {

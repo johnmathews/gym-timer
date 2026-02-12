@@ -263,11 +263,20 @@ function playTone(
   osc.frequency.value = freq;
   const effectiveVolume = volume * _masterVolume;
   if (effectiveVolume <= 0) return;
-  gain.gain.setValueAtTime(0.001, start);
-  gain.gain.linearRampToValueAtTime(effectiveVolume, start + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-  osc.start(start);
-  osc.stop(start + duration);
+
+  // Ensure scheduled time is slightly in the future so iOS Safari
+  // doesn't discard automation events that land in the past.
+  const safeStart = Math.max(start, ctx.currentTime + 0.005);
+
+  // Direct assignment as fallback if all scheduled automation is ignored.
+  gain.gain.value = effectiveVolume;
+  // Clear any prior automation, then start at full volume and decay.
+  // Avoids the ramp-up from near-zero which iOS can silently skip.
+  gain.gain.cancelScheduledValues(0);
+  gain.gain.setValueAtTime(effectiveVolume, safeStart);
+  gain.gain.exponentialRampToValueAtTime(0.001, safeStart + duration);
+  osc.start(safeStart);
+  osc.stop(safeStart + duration);
 }
 
 /** Ascending major chord fanfare: C5 → E5 → G5 */
