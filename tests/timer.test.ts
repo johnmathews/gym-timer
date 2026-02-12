@@ -484,10 +484,10 @@ test.describe('Gym Timer', () => {
   test('volume slider adjusts value', async ({ page }) => {
     await page.getByLabel('Volume').click();
     const slider = page.getByLabel('Volume level');
-    await slider.fill('400');
-    // Verify localStorage was updated (slider max=800, so 400 maps to 4.0)
+    await slider.fill('1600');
+    // Verify localStorage was updated (slider max=3200, so 1600 maps to 16.0)
     const stored = await page.evaluate(() => localStorage.getItem('gym-timer-volume'));
-    expect(stored).toBe('4');
+    expect(stored).toBe('16');
   });
 
   test('volume and fullscreen icons visible during active timer', async ({ page }) => {

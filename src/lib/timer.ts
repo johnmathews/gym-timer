@@ -13,7 +13,7 @@ export function getMasterVolume(): number {
   return _masterVolume;
 }
 
-export const MAX_VOLUME = 8.0;
+export const MAX_VOLUME = 32.0;
 
 export function setMasterVolume(v: number): void {
   _masterVolume = Math.max(0, Math.min(MAX_VOLUME, v));

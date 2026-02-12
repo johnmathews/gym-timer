@@ -556,15 +556,15 @@ describe("master volume", () => {
   });
 
   it("setMasterVolume clamps values above MAX_VOLUME", () => {
-    setMasterVolume(9.0);
-    expect(getMasterVolume()).toBe(8.0);
+    setMasterVolume(35.0);
+    expect(getMasterVolume()).toBe(32.0);
   });
 
   it("setMasterVolume allows values up to MAX_VOLUME", () => {
-    setMasterVolume(4.0);
-    expect(getMasterVolume()).toBe(4.0);
-    setMasterVolume(8.0);
-    expect(getMasterVolume()).toBe(8.0);
+    setMasterVolume(16.0);
+    expect(getMasterVolume()).toBe(16.0);
+    setMasterVolume(32.0);
+    expect(getMasterVolume()).toBe(32.0);
   });
 
   it("setMasterVolume clamps values below 0", () => {
