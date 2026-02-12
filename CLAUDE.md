@@ -19,8 +19,8 @@
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons)
-- `src/lib/timer.test.ts` — 25 unit tests
-- `tests/timer.test.ts` — 30 e2e tests (Playwright)
+- `src/lib/timer.test.ts` — 32 unit tests
+- `tests/timer.test.ts` — 36 e2e tests (Playwright)
 
 ## Timer Phases
 - `getReady` (5s) → `work` → `rest` → `work` → ... → `finished`

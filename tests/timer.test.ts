@@ -375,6 +375,88 @@ test.describe('Gym Timer', () => {
     expect(centerY).toBeLessThan(viewport.height * 0.65);
   });
 
+  test('tapping screen while finished does nothing', async ({ page }) => {
+    // Set work to 5s
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
+
+    const app = page.locator('.app');
+    await expect(app).toHaveClass(/finished/);
+
+    // Tap screen — should stay on finished screen, not reset
+    await page.getByTestId('active-screen').click();
+    await expect(app).toHaveClass(/finished/);
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00');
+  });
+
+  test('finished state shows reset and close buttons but no resume', async ({ page }) => {
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
+
+    await expect(page.getByTestId('reset-button')).toBeVisible();
+    await expect(page.getByTestId('close-button')).toBeVisible();
+    await expect(page.getByTestId('resume-button')).not.toBeVisible();
+    await expect(page.getByTestId('pause-button')).not.toBeVisible();
+  });
+
+  test('progress bar has correct number of segments', async ({ page }) => {
+    // Set reps to 3
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-3').click({ force: true });
+
+    await page.getByTestId('play-button').click();
+
+    // Wait for work phase
+    await expect(page.getByTestId('phase-label')).toHaveText('Work', { timeout: 7000 });
+
+    const segments = page.locator('[data-testid="progress-bar"] .segment');
+    await expect(segments).toHaveCount(3);
+  });
+
+  test('getReady countdown shows correct initial time', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+
+    // Should show 00:05 at the start of getReady
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:05');
+    await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
+  });
+
+  test('can start a new workout after finishing', async ({ page }) => {
+    await page.getByTestId('config-card-work').click();
+    await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
+
+    // Click close to go back to idle
+    await page.getByTestId('close-button').click();
+    await expect(page.getByTestId('config-card-work')).toBeVisible();
+
+    // Start again
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:05');
+  });
+
+  test('screen tap resumes from paused state', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    await page.waitForTimeout(1000);
+
+    // Pause
+    await page.getByTestId('active-screen').click();
+    await expect(page.locator('.app')).toHaveClass(/paused/);
+
+    // Tap screen area (not a button) to resume
+    await page.locator('.countdown-area').click();
+    await expect(page.locator('.app')).not.toHaveClass(/paused/);
+  });
+
   test('countdown time font is large and responsive', async ({ page }) => {
     await page.getByTestId('play-button').click();
 

@@ -412,6 +412,128 @@ describe("configure and multi-round", () => {
   });
 });
 
+describe("edge cases", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("start while already running is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(10, 0, 1);
+    timer.start();
+    expect(get(timer.status)).toBe("running");
+
+    // Second start should not reset anything
+    timer.start();
+    expect(get(timer.status)).toBe("running");
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("pause when not running is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(10, 0, 1);
+
+    // Pause while idle
+    timer.pause();
+    expect(get(timer.status)).toBe("idle");
+
+    // Pause while finished
+    timer.start();
+    vi.advanceTimersByTime((GET_READY_DURATION + 10) * 1000);
+    expect(get(timer.status)).toBe("finished");
+    timer.pause();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("start after finished does not restart", () => {
+    const timer = createTimer();
+    timer.configure(3, 0, 1);
+    timer.start();
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000);
+    expect(get(timer.status)).toBe("finished");
+    expect(get(timer.remaining)).toBe(0);
+
+    timer.start();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("configure while running stops and resets to idle", () => {
+    const timer = createTimer();
+    timer.configure(10, 0, 1);
+    timer.start();
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.status)).toBe("running");
+
+    timer.configure(20, 5, 2);
+    expect(get(timer.status)).toBe("idle");
+    expect(get(timer.remaining)).toBe(20);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.totalReps)).toBe(2);
+
+    // Timer should not be ticking
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(20);
+
+    timer.destroy();
+  });
+
+  it("setDurationSeconds sets correctly", () => {
+    const timer = createTimer();
+    timer.setDurationSeconds(45);
+    expect(get(timer.duration)).toBe(45);
+    expect(get(timer.remaining)).toBe(45);
+    timer.destroy();
+  });
+
+  it("getReady counts down each second", () => {
+    const timer = createTimer();
+    timer.configure(10, 0, 1);
+    timer.start();
+
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+    for (let i = 1; i <= GET_READY_DURATION; i++) {
+      vi.advanceTimersByTime(1000);
+      if (i < GET_READY_DURATION) {
+        expect(get(timer.remaining)).toBe(GET_READY_DURATION - i);
+        expect(get(timer.phase)).toBe("getReady");
+      }
+    }
+    // After full getReady, should be in work
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(10);
+
+    timer.destroy();
+  });
+
+  it("can restart after reset from finished", () => {
+    const timer = createTimer();
+    timer.configure(2, 0, 1);
+    timer.start();
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.reset();
+    expect(get(timer.status)).toBe("idle");
+
+    timer.start();
+    expect(get(timer.status)).toBe("running");
+    expect(get(timer.phase)).toBe("getReady");
+
+    timer.destroy();
+  });
+});
+
 describe("GET_READY_DURATION constant", () => {
   it("is exported and equals 5", () => {
     expect(GET_READY_DURATION).toBe(5);
