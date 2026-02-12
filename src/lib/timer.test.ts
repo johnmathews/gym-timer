@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext, resumeAudioContext } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext, resumeAudioContext } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -546,8 +546,15 @@ describe("master volume", () => {
     setMasterVolume(1.0);
   });
 
-  it("getMasterVolume returns default 1.0", () => {
+  it("getMasterVolume returns set value", () => {
     expect(getMasterVolume()).toBe(1.0);
+  });
+
+  it("default volume is half of MAX_VOLUME and not zero", () => {
+    localStorage.clear();
+    initVolume(); // no localStorage value — should use the built-in default
+    expect(getMasterVolume()).toBe(MAX_VOLUME / 2);
+    expect(getMasterVolume()).toBeGreaterThan(0);
   });
 
   it("setMasterVolume updates value", () => {
