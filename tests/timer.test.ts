@@ -312,7 +312,7 @@ test.describe('Gym Timer', () => {
     await page.locator('.header').click();
   });
 
-  test('full-screen red background when finished', async ({ page }) => {
+  test('black/white flash when finished', async ({ page }) => {
     // Set work to 5s (auto-closes on selection)
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
