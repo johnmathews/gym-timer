@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound, initVolume } from "$lib/timer";
+  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound, initVolume, resumeAudioContext } from "$lib/timer";
   import { log } from "$lib/logger";
   import ConfigCard from "$lib/components/ConfigCard.svelte";
   import RulerPicker from "$lib/components/RulerPicker.svelte";
@@ -48,6 +48,7 @@
   const totalTimeDisplay = $derived(displayTime(totalTime()));
 
   function handleStart() {
+    resumeAudioContext();
     let currentStatus: string;
     status.subscribe((v) => (currentStatus = v))();
     log("ui:start", { status: currentStatus! });
@@ -92,6 +93,7 @@
     // Don't handle taps on buttons or toolbar controls
     if ((e.target as HTMLElement).closest("button")) return;
     if ((e.target as HTMLElement).closest(".active-toolbar")) return;
+    resumeAudioContext();
     if ($status === "running") {
       log("ui:pause");
       timer.pause();
@@ -107,6 +109,7 @@
   }
 
   function handleResume() {
+    resumeAudioContext();
     log("ui:resume");
     timer.start();
   }

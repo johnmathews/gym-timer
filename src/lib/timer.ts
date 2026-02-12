@@ -202,6 +202,35 @@ export function createTimer() {
   };
 }
 
+let _audioCtx: AudioContext | null = null;
+
+/** Get or create the shared AudioContext. Call resumeAudioContext() on user
+ *  gesture to unlock playback on iOS Safari. */
+function getAudioContext(): AudioContext {
+  if (!_audioCtx) {
+    _audioCtx = new AudioContext();
+  }
+  return _audioCtx;
+}
+
+/** Reset the shared AudioContext (for testing). */
+export function resetAudioContext(): void {
+  _audioCtx = null;
+}
+
+/** Resume the shared AudioContext — must be called from a user gesture
+ *  handler (tap/click) so iOS Safari unlocks audio playback. */
+export function resumeAudioContext(): void {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+  } catch {
+    // Web Audio API not available
+  }
+}
+
 function playTone(
   ctx: AudioContext,
   freq: number,
@@ -216,7 +245,8 @@ function playTone(
   osc.type = "sine";
   osc.frequency.value = freq;
   const effectiveVolume = volume * _masterVolume;
-  gain.gain.setValueAtTime(0, start);
+  if (effectiveVolume <= 0) return;
+  gain.gain.setValueAtTime(0.001, start);
   gain.gain.linearRampToValueAtTime(effectiveVolume, start + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
   osc.start(start);
@@ -226,12 +256,11 @@ function playTone(
 /** Ascending major chord fanfare: C5 → E5 → G5 */
 export function playFinishSound() {
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
     playTone(ctx, 523, t, 0.3, 1.0);
     playTone(ctx, 659, t + 0.2, 0.3, 1.0);
     playTone(ctx, 784, t + 0.4, 0.5, 1.0);
-    setTimeout(() => ctx.close(), 2000);
   } catch {
     // Web Audio API not available
   }
@@ -240,11 +269,10 @@ export function playFinishSound() {
 /** Descending two-tone chime: G5 → C5 (signals rest) */
 export function playRestStartSound() {
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
     playTone(ctx, 784, t, 0.25, 1.0);
     playTone(ctx, 523, t + 0.2, 0.35, 1.0);
-    setTimeout(() => ctx.close(), 1500);
   } catch {
     // Web Audio API not available
   }
@@ -253,13 +281,12 @@ export function playRestStartSound() {
 /** Bright bell: quick ascending triad C6 → E6 → G6 with shimmer */
 export function playWorkStartSound() {
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
     // Bright bell tones (octave higher for energy)
     playTone(ctx, 1047, t, 0.15, 0.9);       // C6
     playTone(ctx, 1319, t + 0.08, 0.15, 0.9); // E6
     playTone(ctx, 1568, t + 0.16, 0.3, 1.0);  // G6 (ring longer)
-    setTimeout(() => ctx.close(), 1500);
   } catch {
     // Web Audio API not available
   }

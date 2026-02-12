@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -581,5 +581,111 @@ describe("master volume", () => {
     setMasterVolume(0.8);
     initVolume();
     expect(getMasterVolume()).toBe(0.8);
+  });
+});
+
+describe("sound playback", () => {
+  let mockOscillator: any;
+  let mockGain: any;
+  let mockCtx: any;
+  let OriginalAudioContext: any;
+
+  beforeEach(() => {
+    resetAudioContext();
+    setMasterVolume(1.0);
+    mockOscillator = {
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      type: "",
+      frequency: { value: 0 },
+    };
+    mockGain = {
+      connect: vi.fn(),
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+    };
+    mockCtx = {
+      currentTime: 0,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(() => mockOscillator),
+      createGain: vi.fn(() => mockGain),
+      resume: vi.fn(),
+      close: vi.fn(),
+    };
+    OriginalAudioContext = (window as any).AudioContext;
+    (window as any).AudioContext = vi.fn(function(this: any) {
+      return Object.assign(this, mockCtx);
+    });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetAudioContext();
+    if (OriginalAudioContext) {
+      (window as any).AudioContext = OriginalAudioContext;
+    } else {
+      delete (window as any).AudioContext;
+    }
+  });
+
+  it("playWorkStartSound creates oscillators and ramps gain above zero", () => {
+    playWorkStartSound();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockCtx.createGain).toHaveBeenCalled();
+    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
+    expect(rampCalls.length).toBeGreaterThan(0);
+    for (const call of rampCalls) {
+      expect(call[0]).toBeGreaterThan(0);
+    }
+  });
+
+  it("playRestStartSound creates oscillators and ramps gain above zero", () => {
+    playRestStartSound();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
+    expect(rampCalls.length).toBeGreaterThan(0);
+    for (const call of rampCalls) {
+      expect(call[0]).toBeGreaterThan(0);
+    }
+  });
+
+  it("playFinishSound creates oscillators and ramps gain above zero", () => {
+    playFinishSound();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
+    expect(rampCalls.length).toBeGreaterThan(0);
+    for (const call of rampCalls) {
+      expect(call[0]).toBeGreaterThan(0);
+    }
+  });
+
+  it("sounds respect masterVolume scaling", () => {
+    setMasterVolume(0.5);
+    playWorkStartSound();
+    const rampCalls = mockGain.gain.linearRampToValueAtTime.mock.calls;
+    for (const call of rampCalls) {
+      expect(call[0]).toBeLessThanOrEqual(0.5);
+      expect(call[0]).toBeGreaterThan(0);
+    }
+  });
+
+  it("sounds are silent when masterVolume is 0", () => {
+    setMasterVolume(0);
+    playWorkStartSound();
+    expect(mockOscillator.start).not.toHaveBeenCalled();
+  });
+
+  it("initial gain value is never exactly zero (prevents exponentialRamp bug)", () => {
+    playWorkStartSound();
+    const setValueCalls = mockGain.gain.setValueAtTime.mock.calls;
+    for (const call of setValueCalls) {
+      expect(call[0]).toBeGreaterThan(0);
+    }
   });
 });
