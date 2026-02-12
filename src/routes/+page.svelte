@@ -213,6 +213,7 @@
       label="Work"
       color="#2ECC71"
       value={duration}
+      minValue={5}
       maxValue={360}
       step={5}
       formatValue={displayTime}

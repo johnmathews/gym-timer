@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+# Only gate pushes to main
+while read local_ref local_oid remote_ref remote_oid; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Pushing to main — running tests..."
+    echo ""
+
+    echo "==> Unit tests"
+    npm run test:unit
+
+    echo ""
+    echo "==> E2E tests"
+    npx playwright test
+
+    echo ""
+    echo "All tests passed."
+    exit 0
+  fi
+done
+
+# Not pushing to main — allow without tests
+exit 0

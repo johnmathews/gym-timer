@@ -37,6 +37,16 @@ test.describe('Gym Timer', () => {
     await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
+  test('work picker cannot be set below 5 seconds', async ({ page }) => {
+    await page.getByTestId('config-card-work').click();
+    const ruler = page.locator('.ruler');
+    const box = await ruler.boundingBox();
+    // Tap at the very top of the ruler (y=0 means value=0) — this also closes the picker
+    await ruler.click({ position: { x: box!.width / 2, y: 1 }, force: true });
+    // Back on the config screen — work card should show 0:05, not 0:00
+    await expect(page.getByTestId('config-card-work')).toContainText('0:05');
+  });
+
   test('cancel reverts picker value', async ({ page }) => {
     await page.getByTestId('config-card-work').click();
     // Cancel without selecting a value
