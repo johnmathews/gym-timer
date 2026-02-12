@@ -466,4 +466,32 @@ test.describe('Gym Timer', () => {
     // viewport (1280x720) min(25vw, 10rem) yields well over 80px
     expect(fontSize).toBeGreaterThanOrEqual(80);
   });
+
+  test('volume button is visible on idle screen', async ({ page }) => {
+    await expect(page.getByLabel('Volume')).toBeVisible();
+  });
+
+  test('volume button toggles slider on click', async ({ page }) => {
+    const volumeBtn = page.getByRole('button', { name: 'Volume' });
+    await volumeBtn.click();
+    await expect(page.getByLabel('Volume level')).toBeVisible();
+
+    // Click again to close
+    await volumeBtn.click();
+    await expect(page.getByLabel('Volume level')).not.toBeVisible();
+  });
+
+  test('volume slider adjusts value', async ({ page }) => {
+    await page.getByLabel('Volume').click();
+    const slider = page.getByLabel('Volume level');
+    await slider.fill('50');
+    // Verify localStorage was updated
+    const stored = await page.evaluate(() => localStorage.getItem('gym-timer-volume'));
+    expect(stored).toBe('0.5');
+  });
+
+  test('volume and fullscreen icons hidden during active timer', async ({ page }) => {
+    await page.getByTestId('play-button').click();
+    await expect(page.getByLabel('Volume')).not.toBeVisible();
+  });
 });

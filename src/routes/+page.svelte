@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound } from "$lib/timer";
+  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound, initVolume } from "$lib/timer";
   import { log } from "$lib/logger";
   import ConfigCard from "$lib/components/ConfigCard.svelte";
   import RulerPicker from "$lib/components/RulerPicker.svelte";
   import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
   import CountdownDisplay from "$lib/components/CountdownDisplay.svelte";
   import PhaseHeader from "$lib/components/PhaseHeader.svelte";
+  import VolumeControl from "$lib/components/VolumeControl.svelte";
+  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
 
   const timer = createTimer();
   const { remaining, status, phase, currentRep, totalReps } = timer;
@@ -22,6 +24,7 @@
   let pickerOriginalValue = $state(0);
 
   onMount(() => {
+    initVolume();
     log("mount", { duration, rest, reps });
     timer.configure(duration, rest, reps);
   });
@@ -195,6 +198,11 @@
       />
     </div>
 
+    <div class="toolbar">
+      <VolumeControl />
+      <FullscreenButton />
+    </div>
+
     <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
   {:else if activePicker === "work"}
     <RulerPicker
@@ -340,6 +348,15 @@
     flex-direction: column;
     gap: 8px;
     width: 100%;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 12px 0;
   }
 
   /* Active states: full-viewport immersive */

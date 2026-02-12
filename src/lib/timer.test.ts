@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -537,5 +537,49 @@ describe("edge cases", () => {
 describe("GET_READY_DURATION constant", () => {
   it("is exported and equals 5", () => {
     expect(GET_READY_DURATION).toBe(5);
+  });
+});
+
+describe("master volume", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setMasterVolume(1.0);
+  });
+
+  it("getMasterVolume returns default 1.0", () => {
+    expect(getMasterVolume()).toBe(1.0);
+  });
+
+  it("setMasterVolume updates value", () => {
+    setMasterVolume(0.5);
+    expect(getMasterVolume()).toBe(0.5);
+  });
+
+  it("setMasterVolume clamps values above 1", () => {
+    setMasterVolume(1.5);
+    expect(getMasterVolume()).toBe(1.0);
+  });
+
+  it("setMasterVolume clamps values below 0", () => {
+    setMasterVolume(-0.5);
+    expect(getMasterVolume()).toBe(0.0);
+  });
+
+  it("setMasterVolume writes to localStorage", () => {
+    setMasterVolume(0.7);
+    expect(localStorage.getItem("gym-timer-volume")).toBe("0.7");
+  });
+
+  it("initVolume reads from localStorage", () => {
+    localStorage.setItem("gym-timer-volume", "0.3");
+    initVolume();
+    expect(getMasterVolume()).toBe(0.3);
+  });
+
+  it("initVolume ignores invalid localStorage values", () => {
+    localStorage.setItem("gym-timer-volume", "notanumber");
+    setMasterVolume(0.8);
+    initVolume();
+    expect(getMasterVolume()).toBe(0.8);
   });
 });

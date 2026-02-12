@@ -6,6 +6,36 @@ export type TimerPhase = "getReady" | "work" | "rest";
 
 export const GET_READY_DURATION = 5;
 
+const VOLUME_STORAGE_KEY = "gym-timer-volume";
+let _masterVolume = 1.0;
+
+export function getMasterVolume(): number {
+  return _masterVolume;
+}
+
+export function setMasterVolume(v: number): void {
+  _masterVolume = Math.max(0, Math.min(1, v));
+  try {
+    localStorage.setItem(VOLUME_STORAGE_KEY, String(_masterVolume));
+  } catch {
+    // localStorage not available
+  }
+}
+
+export function initVolume(): void {
+  try {
+    const stored = localStorage.getItem(VOLUME_STORAGE_KEY);
+    if (stored !== null) {
+      const parsed = parseFloat(stored);
+      if (!isNaN(parsed)) {
+        _masterVolume = Math.max(0, Math.min(1, parsed));
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+}
+
 export function formatTime(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
@@ -185,8 +215,9 @@ function playTone(
   gain.connect(ctx.destination);
   osc.type = "sine";
   osc.frequency.value = freq;
+  const effectiveVolume = volume * _masterVolume;
   gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.linearRampToValueAtTime(effectiveVolume, start + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
   osc.start(start);
   osc.stop(start + duration);
