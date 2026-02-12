@@ -181,7 +181,7 @@
       <ConfigCard
         label="Rest"
         value={displayTime(rest)}
-        color="#F39C12"
+        color="#E8450E"
         onclick={() => openPicker("rest")}
       />
       <ConfigCard
@@ -210,7 +210,7 @@
   {:else if activePicker === "rest"}
     <RulerPicker
       label="Rest"
-      color="#F39C12"
+      color="#E8450E"
       value={rest}
       maxValue={120}
       step={5}
@@ -264,22 +264,22 @@
           <!-- Reset, Play, Close buttons -->
           <button class="icon-btn small-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
             <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="#F5A623" stroke-width="2.5" />
-              <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="#F5A623" stroke-width="2.5" stroke-linecap="round" />
-              <polyline points="17,21 17,26 22,26" fill="none" stroke="#F5A623" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="25" cy="25" r="23" fill="none" stroke="#FFBA08" stroke-width="2.5" />
+              <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
+              <polyline points="17,21 17,26 22,26" fill="none" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
           <button class="icon-btn play-active-btn" data-testid="resume-button" onclick={handleResume} aria-label="Resume">
             <svg viewBox="0 0 70 70" aria-hidden="true">
-              <circle cx="35" cy="35" r="35" fill="#F5A623" />
+              <circle cx="35" cy="35" r="35" fill="#FFBA08" />
               <polygon points="28,20 28,50 52,35" fill="rgba(0,0,0,0.85)" />
             </svg>
           </button>
           <button class="icon-btn small-btn" data-testid="close-button" onclick={handleClose} aria-label="Close">
             <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="#F5A623" stroke-width="2.5" />
-              <line x1="17" y1="17" x2="33" y2="33" stroke="#F5A623" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="33" y1="17" x2="17" y2="33" stroke="#F5A623" stroke-width="2.5" stroke-linecap="round" />
+              <circle cx="25" cy="25" r="23" fill="none" stroke="#FFBA08" stroke-width="2.5" />
+              <line x1="17" y1="17" x2="33" y2="33" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="33" y1="17" x2="17" y2="33" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
             </svg>
           </button>
         {:else if isFinished}
@@ -350,7 +350,7 @@
   }
 
   .app.getReady {
-    background-color: #F5A623;
+    background-color: #FFBA08;
   }
 
   .app.work {
@@ -358,7 +358,7 @@
   }
 
   .app.rest {
-    background-color: #F39C12;
+    background-color: #E8450E;
   }
 
   .app.paused {
@@ -366,12 +366,14 @@
   }
 
   .app.finished {
-    animation: finished-flash 1s steps(1) infinite;
+    animation: finished-flash 1s steps(1) 3 forwards;
+    background-color: #000;
   }
 
   .app.finished :global(.time),
   .app.finished .finished-btn {
-    animation: finished-flash-text 1s steps(1) infinite;
+    animation: finished-flash-text 1s steps(1) 3 forwards;
+    color: #fff;
   }
 
   /* Active screen layout */
@@ -407,7 +409,7 @@
 
   /* Paused state: amber time */
   .app.paused :global(.time) {
-    color: #F5A623;
+    color: #FFBA08;
   }
 
   .icon-btn {
@@ -437,7 +439,7 @@
 
   /* Color for pause bars matches background */
   .app.getReady .pause-btn svg {
-    color: #F5A623;
+    color: #FFBA08;
   }
 
   .app.work .pause-btn svg {
@@ -445,7 +447,7 @@
   }
 
   .app.rest .pause-btn svg {
-    color: #F39C12;
+    color: #E8450E;
   }
 
   .play-active-btn {
