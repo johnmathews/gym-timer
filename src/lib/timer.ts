@@ -219,13 +219,15 @@ export function playRestStartSound() {
   }
 }
 
-/** Ascending two-tone chime: C5 → G5 (signals back to work) */
-export function playRestEndSound() {
+/** Bright bell: quick ascending triad C6 → E6 → G6 with shimmer */
+export function playWorkStartSound() {
   try {
     const ctx = new AudioContext();
     const t = ctx.currentTime;
-    playTone(ctx, 523, t, 0.25);
-    playTone(ctx, 784, t + 0.2, 0.35);
+    // Bright bell tones (octave higher for energy)
+    playTone(ctx, 1047, t, 0.15, 0.2);       // C6
+    playTone(ctx, 1319, t + 0.08, 0.15, 0.2); // E6
+    playTone(ctx, 1568, t + 0.16, 0.3, 0.25); // G6 (ring longer)
     setTimeout(() => ctx.close(), 1500);
   } catch {
     // Web Audio API not available

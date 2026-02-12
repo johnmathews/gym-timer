@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playRestEndSound } from "$lib/timer";
+  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound } from "$lib/timer";
   import { log } from "$lib/logger";
   import ConfigCard from "$lib/components/ConfigCard.svelte";
   import RulerPicker from "$lib/components/RulerPicker.svelte";
@@ -16,6 +16,7 @@
   let reps = $state(1);
   let prevStatus: string = "idle";
   let prevPhase: string = "work";
+  let prevRep: number = 1;
 
   let activePicker: "work" | "rest" | "repeat" | null = $state(null);
   let pickerOriginalValue = $state(0);
@@ -56,21 +57,23 @@
   $effect(() => {
     const s = $status;
     const p = $phase;
+    const r = $currentRep;
     if (s === "finished" && prevStatus !== "finished") {
       log("ui:finishSound");
       playFinishSound();
     }
     if (s === "running") {
-      if (p === "rest" && prevPhase === "work") {
+      if (p === "work" && (prevPhase !== "work" || r !== prevRep)) {
+        log("ui:workStartSound");
+        playWorkStartSound();
+      } else if (p === "rest" && prevPhase === "work") {
         log("ui:restStartSound");
         playRestStartSound();
-      } else if (p === "work" && prevPhase === "rest") {
-        log("ui:restEndSound");
-        playRestEndSound();
       }
     }
     prevStatus = s;
     prevPhase = p;
+    prevRep = r;
   });
 
   const canStart = $derived(duration > 0);
