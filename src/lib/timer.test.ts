@@ -796,11 +796,11 @@ describe("audio session unlock", () => {
     expect(mockAudioPlay).toHaveBeenCalledTimes(2);
   });
 
-  it("sets navigator.audioSession.type to playback when available", () => {
-    const mockSession = { type: "ambient" };
+  it("sets navigator.audioSession.type to ambient when available", () => {
+    const mockSession = { type: "playback" };
     (navigator as any).audioSession = mockSession;
     resumeAudioContext();
-    expect(mockSession.type).toBe("playback");
+    expect(mockSession.type).toBe("ambient");
   });
 
   it("does not throw when navigator.audioSession is unavailable", () => {

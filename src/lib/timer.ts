@@ -239,14 +239,15 @@ export function resumeAudioContext(): void {
     // Web Audio API not available
   }
 
-  // Upgrade iOS audio session from "ambient" to "playback" so Web Audio
-  // can play alongside other apps (YouTube, Music, etc.). Playing any
-  // audio via an <audio> element during a user gesture triggers this.
+  // Set iOS audio session to "ambient" so our short alert sounds mix
+  // with other apps (YouTube, Spotify, etc.) instead of stopping them.
+  // Playing a silent WAV via <audio> during a user gesture ensures iOS
+  // Safari fully initialises the audio session.
   if (!_audioSessionUnlocked) {
     try {
       const nav = navigator as any;
       if (nav.audioSession) {
-        nav.audioSession.type = "playback";
+        nav.audioSession.type = "ambient";
       }
     } catch {
       // audioSession API not available
