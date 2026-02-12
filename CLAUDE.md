@@ -16,8 +16,13 @@
 - Requires Node 22+ (use `nvm use 22`)
 
 ## Key Files
-- `src/lib/timer.ts` — timer logic (stores + pure functions)
-- `src/lib/components/` — DurationPicker, CountdownDisplay, TimerControls
-- `src/routes/+page.svelte` — main page
-- `src/lib/timer.test.ts` — unit tests
-- `tests/timer.test.ts` — e2e tests (Playwright)
+- `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
+- `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader
+- `src/routes/+page.svelte` — main page (layout, state, circular icon buttons)
+- `src/lib/timer.test.ts` — 25 unit tests
+- `tests/timer.test.ts` — 30 e2e tests (Playwright)
+
+## Timer Phases
+- `getReady` (5s) → `work` → `rest` → `work` → ... → `finished`
+- Sounds: bell on work start, descending chime on rest start, fanfare on finish
+- Background colors: getReady/rest = yellow `#FFBA08`, work = green `#2ECC71`, paused = black, finished = black/white flash (3s)
