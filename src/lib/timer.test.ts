@@ -555,9 +555,16 @@ describe("master volume", () => {
     expect(getMasterVolume()).toBe(0.5);
   });
 
-  it("setMasterVolume clamps values above 1", () => {
+  it("setMasterVolume clamps values above MAX_VOLUME", () => {
+    setMasterVolume(2.5);
+    expect(getMasterVolume()).toBe(2.0);
+  });
+
+  it("setMasterVolume allows values up to MAX_VOLUME", () => {
     setMasterVolume(1.5);
-    expect(getMasterVolume()).toBe(1.0);
+    expect(getMasterVolume()).toBe(1.5);
+    setMasterVolume(2.0);
+    expect(getMasterVolume()).toBe(2.0);
   });
 
   it("setMasterVolume clamps values below 0", () => {
@@ -587,6 +594,7 @@ describe("master volume", () => {
 describe("sound playback", () => {
   let mockOscillator: any;
   let mockGain: any;
+  let mockCompressor: any;
   let mockCtx: any;
   let OriginalAudioContext: any;
 
@@ -608,12 +616,21 @@ describe("sound playback", () => {
         exponentialRampToValueAtTime: vi.fn(),
       },
     };
+    mockCompressor = {
+      connect: vi.fn(),
+      threshold: { value: 0 },
+      knee: { value: 0 },
+      ratio: { value: 0 },
+      attack: { value: 0 },
+      release: { value: 0 },
+    };
     mockCtx = {
       currentTime: 0,
       state: "running",
       destination: {},
       createOscillator: vi.fn(() => mockOscillator),
       createGain: vi.fn(() => mockGain),
+      createDynamicsCompressor: vi.fn(() => mockCompressor),
       resume: vi.fn(),
       close: vi.fn(),
     };
@@ -687,5 +704,20 @@ describe("sound playback", () => {
     for (const call of setValueCalls) {
       expect(call[0]).toBeGreaterThan(0);
     }
+  });
+
+  it("uses DynamicsCompressor when volume exceeds 1.0", () => {
+    setMasterVolume(1.5);
+    playWorkStartSound();
+    expect(mockCtx.createDynamicsCompressor).toHaveBeenCalled();
+    expect(mockCompressor.connect).toHaveBeenCalledWith(mockCtx.destination);
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCompressor);
+  });
+
+  it("does not use DynamicsCompressor when volume is 1.0 or below", () => {
+    setMasterVolume(1.0);
+    playWorkStartSound();
+    expect(mockCtx.createDynamicsCompressor).not.toHaveBeenCalled();
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCtx.destination);
   });
 });

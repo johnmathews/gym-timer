@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getMasterVolume, setMasterVolume, initVolume } from "$lib/timer";
+  import { getMasterVolume, setMasterVolume, initVolume, MAX_VOLUME } from "$lib/timer";
 
+  const maxSlider = MAX_VOLUME * 100;
   let volume = $state(100);
   let open = $state(false);
   let containerEl: HTMLDivElement | undefined = $state();
@@ -28,7 +29,9 @@
     setMasterVolume(volume / 100);
   }
 
-  const iconLevel = $derived(volume === 0 ? "muted" : volume <= 50 ? "low" : "high");
+  const iconLevel = $derived(
+    volume === 0 ? "muted" : volume <= 50 ? "low" : volume <= 100 ? "high" : "boost"
+  );
 </script>
 
 <div class="volume-control" bind:this={containerEl}>
@@ -40,9 +43,13 @@
         <line x1="22" y1="9" x2="18" y2="15" />
       {:else if iconLevel === "low"}
         <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      {:else if iconLevel === "high"}
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
       {:else}
         <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        <text x="20" y="6" fill="white" stroke="none" font-size="7" font-weight="bold">+</text>
       {/if}
     </svg>
   </button>
@@ -51,7 +58,7 @@
       <input
         type="range"
         min="0"
-        max="100"
+        max={maxSlider}
         value={volume}
         oninput={handleInput}
         class="volume-slider"

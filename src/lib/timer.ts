@@ -13,8 +13,10 @@ export function getMasterVolume(): number {
   return _masterVolume;
 }
 
+export const MAX_VOLUME = 2.0;
+
 export function setMasterVolume(v: number): void {
-  _masterVolume = Math.max(0, Math.min(1, v));
+  _masterVolume = Math.max(0, Math.min(MAX_VOLUME, v));
   try {
     localStorage.setItem(VOLUME_STORAGE_KEY, String(_masterVolume));
   } catch {
@@ -28,7 +30,7 @@ export function initVolume(): void {
     if (stored !== null) {
       const parsed = parseFloat(stored);
       if (!isNaN(parsed)) {
-        _masterVolume = Math.max(0, Math.min(1, parsed));
+        _masterVolume = Math.max(0, Math.min(MAX_VOLUME, parsed));
       }
     }
   } catch {
@@ -241,7 +243,22 @@ function playTone(
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+
+  // Use a compressor when volume exceeds 1.0 to boost loudness
+  // without harsh digital clipping (useful on iOS over background music)
+  if (_masterVolume > 1.0) {
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -10;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.1;
+    gain.connect(compressor);
+    compressor.connect(ctx.destination);
+  } else {
+    gain.connect(ctx.destination);
+  }
+
   osc.type = "sine";
   osc.frequency.value = freq;
   const effectiveVolume = volume * _masterVolume;
