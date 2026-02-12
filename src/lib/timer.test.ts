@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext, resumeAudioContext } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -739,5 +739,72 @@ describe("sound playback", () => {
     mockCtx.state = "running";
     playWorkStartSound();
     expect(mockCtx.resume).not.toHaveBeenCalled();
+  });
+});
+
+describe("audio session unlock", () => {
+  let mockCtx: any;
+  let mockAudioPlay: any;
+
+  beforeEach(() => {
+    resetAudioContext();
+    mockCtx = {
+      currentTime: 0,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(),
+      createGain: vi.fn(),
+      resume: vi.fn(),
+    };
+    (window as any).AudioContext = vi.fn(function(this: any) {
+      return Object.assign(this, mockCtx);
+    });
+
+    mockAudioPlay = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("Audio", vi.fn(function(this: any) {
+      this.play = mockAudioPlay;
+      return this;
+    }));
+  });
+
+  afterEach(() => {
+    resetAudioContext();
+    vi.unstubAllGlobals();
+    delete (navigator as any).audioSession;
+  });
+
+  it("plays silent WAV via Audio element to unlock iOS audio session", () => {
+    resumeAudioContext();
+    expect((window as any).Audio).toHaveBeenCalled();
+    const src = (window as any).Audio.mock.calls[0][0];
+    expect(src).toContain("data:audio/wav;base64,");
+    expect(mockAudioPlay).toHaveBeenCalled();
+  });
+
+  it("only unlocks audio session once", async () => {
+    resumeAudioContext();
+    await Promise.resolve(); // let play().then() resolve
+    resumeAudioContext();
+    expect(mockAudioPlay).toHaveBeenCalledTimes(1);
+  });
+
+  it("resetAudioContext resets the unlock flag", async () => {
+    resumeAudioContext();
+    await Promise.resolve();
+    resetAudioContext();
+    resumeAudioContext();
+    expect(mockAudioPlay).toHaveBeenCalledTimes(2);
+  });
+
+  it("sets navigator.audioSession.type to playback when available", () => {
+    const mockSession = { type: "ambient" };
+    (navigator as any).audioSession = mockSession;
+    resumeAudioContext();
+    expect(mockSession.type).toBe("playback");
+  });
+
+  it("does not throw when navigator.audioSession is unavailable", () => {
+    delete (navigator as any).audioSession;
+    expect(() => resumeAudioContext()).not.toThrow();
   });
 });
