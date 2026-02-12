@@ -3,6 +3,7 @@
     label: string;
     color: string;
     value: number;
+    minValue?: number;
     maxValue: number;
     step: number;
     formatValue: (v: number) => string;
@@ -17,6 +18,7 @@
     label,
     color,
     value,
+    minValue = 0,
     maxValue,
     step,
     formatValue,
@@ -55,7 +57,7 @@
     const percent = Math.max(0, Math.min(y / rect.height, 1));
     const raw = percent * maxValue;
     const snapped = Math.round(raw / step) * step;
-    return Math.max(0, Math.min(snapped, maxValue));
+    return Math.max(minValue, Math.min(snapped, maxValue));
   }
 
   function handlePointerDown(e: PointerEvent) {
@@ -76,6 +78,7 @@
     const target = e.currentTarget as HTMLElement;
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
+      onclose();
     }
   }
 </script>

@@ -30,9 +30,9 @@
   .total-time-display {
     flex: 1;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     width: 100%;
-    padding: 0 24px 24px;
+    padding: 0 24px;
   }
 
   .row {
@@ -48,7 +48,7 @@
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
-    width: 15%;
+    width: 22%;
     touch-action: manipulation;
   }
 
@@ -68,12 +68,12 @@
 
   .time {
     flex: 1;
-    font-weight: 700;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: #fff;
     letter-spacing: -0.02em;
     line-height: 1;
     text-align: right;
-    font-size: 25vw;
+    font-size: min(25vw, 8rem);
   }
 </style>

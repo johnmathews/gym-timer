@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -61,12 +61,39 @@ describe("createTimer", () => {
     timer.destroy();
   });
 
-  it("counts down each second", () => {
+  it("enters getReady phase on start", () => {
     const timer = createTimer();
     timer.setDuration(0, 5);
     timer.start();
 
     expect(get(timer.status)).toBe("running");
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("transitions from getReady to work after countdown", () => {
+    const timer = createTimer();
+    timer.setDuration(0, 5);
+    timer.start();
+
+    // Advance through getReady (3 seconds)
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("counts down each second after getReady", () => {
+    const timer = createTimer();
+    timer.setDuration(0, 5);
+    timer.start();
+
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
     expect(get(timer.remaining)).toBe(5);
 
     vi.advanceTimersByTime(1000);
@@ -83,7 +110,8 @@ describe("createTimer", () => {
     timer.setDuration(0, 3);
     timer.start();
 
-    vi.advanceTimersByTime(3000);
+    // getReady + work
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000);
     expect(get(timer.remaining)).toBe(0);
     expect(get(timer.status)).toBe("finished");
 
@@ -94,6 +122,10 @@ describe("createTimer", () => {
     const timer = createTimer();
     timer.setDuration(0, 10);
     timer.start();
+
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
 
     vi.advanceTimersByTime(3000);
     expect(get(timer.remaining)).toBe(7);
@@ -113,17 +145,42 @@ describe("createTimer", () => {
     timer.destroy();
   });
 
+  it("can pause during getReady phase", () => {
+    const timer = createTimer();
+    timer.setDuration(0, 10);
+    timer.start();
+
+    expect(get(timer.phase)).toBe("getReady");
+    vi.advanceTimersByTime(1000);
+    expect(get(timer.remaining)).toBe(2);
+
+    timer.pause();
+    expect(get(timer.status)).toBe("paused");
+    expect(get(timer.phase)).toBe("getReady");
+
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(2); // didn't change
+
+    timer.start();
+    vi.advanceTimersByTime(2000);
+    // Should have transitioned to work
+    expect(get(timer.phase)).toBe("work");
+
+    timer.destroy();
+  });
+
   it("resets to original duration", () => {
     const timer = createTimer();
     timer.setDuration(0, 10);
     timer.start();
 
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime((GET_READY_DURATION + 5) * 1000);
     expect(get(timer.remaining)).toBe(5);
 
     timer.reset();
     expect(get(timer.remaining)).toBe(10);
     expect(get(timer.status)).toBe("idle");
+    expect(get(timer.phase)).toBe("work");
 
     timer.destroy();
   });
@@ -133,7 +190,7 @@ describe("createTimer", () => {
     timer.setDuration(0, 2);
     timer.start();
 
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
     expect(get(timer.status)).toBe("finished");
 
     timer.reset();
@@ -176,11 +233,26 @@ describe("configure and multi-round", () => {
     timer.destroy();
   });
 
-  it("single rep works same as before", () => {
+  it("configure treats negative reps as reps=1", () => {
+    const timer = createTimer();
+    timer.configure(30, 10, -5);
+
+    expect(get(timer.totalReps)).toBe(1);
+
+    timer.destroy();
+  });
+
+  it("single rep works with getReady", () => {
     const timer = createTimer();
     timer.configure(5, 0, 1);
     timer.start();
 
+    // getReady phase
+    expect(get(timer.phase)).toBe("getReady");
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+
+    // work phase
+    expect(get(timer.phase)).toBe("work");
     vi.advanceTimersByTime(5000);
     expect(get(timer.remaining)).toBe(0);
     expect(get(timer.status)).toBe("finished");
@@ -190,10 +262,14 @@ describe("configure and multi-round", () => {
     timer.destroy();
   });
 
-  it("multi-rep with rest cycles work→rest→work→...→finished", () => {
+  it("multi-rep with rest cycles getReady→work→rest→work→...→finished", () => {
     const timer = createTimer();
     timer.configure(3, 2, 2);
     timer.start();
+
+    // getReady phase
+    expect(get(timer.phase)).toBe("getReady");
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
 
     // Rep 1 work: 3s
     expect(get(timer.phase)).toBe("work");
@@ -225,6 +301,9 @@ describe("configure and multi-round", () => {
     timer.configure(3, 0, 3);
     timer.start();
 
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+
     // Rep 1 work
     expect(get(timer.phase)).toBe("work");
     expect(get(timer.currentRep)).toBe(1);
@@ -254,6 +333,9 @@ describe("configure and multi-round", () => {
     timer.configure(3, 2, 3);
     timer.start();
 
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+
     // Advance into rest phase of rep 1
     vi.advanceTimersByTime(3000);
     expect(get(timer.phase)).toBe("rest");
@@ -271,10 +353,29 @@ describe("configure and multi-round", () => {
     timer.destroy();
   });
 
+  it("reset during getReady returns to idle", () => {
+    const timer = createTimer();
+    timer.configure(5, 2, 2);
+    timer.start();
+
+    expect(get(timer.phase)).toBe("getReady");
+    vi.advanceTimersByTime(1000);
+
+    timer.reset();
+    expect(get(timer.status)).toBe("idle");
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
   it("phase and currentRep stores update during countdown", () => {
     const timer = createTimer();
     timer.configure(2, 1, 2);
     timer.start();
+
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
 
     const phases: string[] = [];
     const reps: number[] = [];
@@ -308,5 +409,11 @@ describe("configure and multi-round", () => {
     expect(get(timer.status)).toBe("finished");
 
     timer.destroy();
+  });
+});
+
+describe("GET_READY_DURATION constant", () => {
+  it("is exported and equals 3", () => {
+    expect(GET_READY_DURATION).toBe(3);
   });
 });

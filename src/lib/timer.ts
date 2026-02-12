@@ -2,7 +2,9 @@ import { writable, derived, type Readable } from "svelte/store";
 import { log } from "./logger";
 
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
-export type TimerPhase = "work" | "rest";
+export type TimerPhase = "getReady" | "work" | "rest";
+
+export const GET_READY_DURATION = 3;
 
 export function formatTime(totalSeconds: number): string {
   const mins = Math.floor(totalSeconds / 60);
@@ -71,7 +73,12 @@ export function createTimer() {
         const currentPhase = getStore(phase);
         const rep = getStore(currentRep);
 
-        if (currentPhase === "work" && rep < _totalReps && _restDuration > 0) {
+        if (currentPhase === "getReady") {
+          // Get ready done, start first work phase
+          log("phase:getReady→work");
+          phase.set("work");
+          return _workDuration;
+        } else if (currentPhase === "work" && rep < _totalReps && _restDuration > 0) {
           // Work done, start rest
           log("phase:work→rest", { rep });
           phase.set("rest");
@@ -107,10 +114,18 @@ export function createTimer() {
     const currentRemaining = getStore(remaining);
     const currentStatus = getStore(status);
 
-    if (currentRemaining <= 0) return;
     if (currentStatus === "running") return;
+    if (currentStatus === "idle" && _workDuration <= 0) return;
+    if (currentStatus !== "idle" && currentRemaining <= 0) return;
 
     log("start", { status: currentStatus, remaining: currentRemaining });
+
+    if (currentStatus === "idle") {
+      // Enter getReady phase before starting work
+      phase.set("getReady");
+      remaining.set(GET_READY_DURATION);
+    }
+
     status.set("running");
     clearTick();
 
@@ -157,51 +172,62 @@ export function createTimer() {
   };
 }
 
-export function playAlertSound() {
+function playTone(
+  ctx: AudioContext,
+  freq: number,
+  start: number,
+  duration: number,
+  volume = 0.25,
+): void {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+  osc.start(start);
+  osc.stop(start + duration);
+}
+
+/** Ascending major chord fanfare: C5 → E5 → G5 */
+export function playFinishSound() {
   try {
     const ctx = new AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-
-    oscillator.type = "square";
-    oscillator.frequency.value = 880;
-    gain.gain.value = 0.3;
-
-    oscillator.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-    oscillator.stop(ctx.currentTime + 0.8);
-
-    // Second beep after a short pause
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = "square";
-    osc2.frequency.value = 880;
-    gain2.gain.value = 0.3;
-    osc2.start(ctx.currentTime + 1.0);
-    gain2.gain.setValueAtTime(0.3, ctx.currentTime + 1.0);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-    osc2.stop(ctx.currentTime + 1.8);
-
-    // Third beep
-    const osc3 = ctx.createOscillator();
-    const gain3 = ctx.createGain();
-    osc3.connect(gain3);
-    gain3.connect(ctx.destination);
-    osc3.type = "square";
-    osc3.frequency.value = 1100;
-    gain3.gain.value = 0.3;
-    osc3.start(ctx.currentTime + 2.0);
-    gain3.gain.setValueAtTime(0.3, ctx.currentTime + 2.0);
-    gain3.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.0);
-    osc3.stop(ctx.currentTime + 3.0);
-
-    setTimeout(() => ctx.close(), 4000);
+    const t = ctx.currentTime;
+    playTone(ctx, 523, t, 0.3);
+    playTone(ctx, 659, t + 0.2, 0.3);
+    playTone(ctx, 784, t + 0.4, 0.5, 0.3);
+    setTimeout(() => ctx.close(), 2000);
   } catch {
-    // Web Audio API not available — silent fallback
+    // Web Audio API not available
+  }
+}
+
+/** Descending two-tone chime: G5 → C5 (signals rest) */
+export function playRestStartSound() {
+  try {
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+    playTone(ctx, 784, t, 0.25);
+    playTone(ctx, 523, t + 0.2, 0.35);
+    setTimeout(() => ctx.close(), 1500);
+  } catch {
+    // Web Audio API not available
+  }
+}
+
+/** Ascending two-tone chime: C5 → G5 (signals back to work) */
+export function playRestEndSound() {
+  try {
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+    playTone(ctx, 523, t, 0.25);
+    playTone(ctx, 784, t + 0.2, 0.35);
+    setTimeout(() => ctx.close(), 1500);
+  } catch {
+    // Web Audio API not available
   }
 }
