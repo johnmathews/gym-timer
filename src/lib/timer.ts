@@ -240,6 +240,11 @@ function playTone(
   duration: number,
   volume = 1.0,
 ): void {
+  // Defensive resume: if iOS re-suspended the context (e.g. after
+  // screen lock/unlock), try to resume it so sounds aren't dropped.
+  if (ctx.state === "suspended") {
+    ctx.resume();
+  }
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);

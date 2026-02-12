@@ -728,4 +728,16 @@ describe("sound playback", () => {
     expect(mockCtx.createDynamicsCompressor).not.toHaveBeenCalled();
     expect(mockGain.connect).toHaveBeenCalledWith(mockCtx.destination);
   });
+
+  it("resumes suspended AudioContext defensively in playTone", () => {
+    mockCtx.state = "suspended";
+    playWorkStartSound();
+    expect(mockCtx.resume).toHaveBeenCalled();
+  });
+
+  it("does not call resume when AudioContext is already running", () => {
+    mockCtx.state = "running";
+    playWorkStartSound();
+    expect(mockCtx.resume).not.toHaveBeenCalled();
+  });
 });
