@@ -205,6 +205,11 @@ export function createTimer() {
 }
 
 let _audioCtx: AudioContext | null = null;
+let _audioSessionUnlocked = false;
+
+// Minimal silent WAV (1 sample, 16-bit mono, 44.1kHz) used to upgrade
+// iOS Safari's audio session from "ambient" to "playback".
+const SILENT_WAV = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==";
 
 /** Get or create the shared AudioContext. Call resumeAudioContext() on user
  *  gesture to unlock playback on iOS Safari. */
@@ -218,10 +223,12 @@ function getAudioContext(): AudioContext {
 /** Reset the shared AudioContext (for testing). */
 export function resetAudioContext(): void {
   _audioCtx = null;
+  _audioSessionUnlocked = false;
 }
 
-/** Resume the shared AudioContext — must be called from a user gesture
- *  handler (tap/click) so iOS Safari unlocks audio playback. */
+/** Resume the shared AudioContext and upgrade the audio session — must be
+ *  called from a user gesture handler (tap/click) so iOS Safari unlocks
+ *  audio playback and allows mixing with other apps. */
 export function resumeAudioContext(): void {
   try {
     const ctx = getAudioContext();
@@ -230,6 +237,28 @@ export function resumeAudioContext(): void {
     }
   } catch {
     // Web Audio API not available
+  }
+
+  // Upgrade iOS audio session from "ambient" to "playback" so Web Audio
+  // can play alongside other apps (YouTube, Music, etc.). Playing any
+  // audio via an <audio> element during a user gesture triggers this.
+  if (!_audioSessionUnlocked) {
+    try {
+      const nav = navigator as any;
+      if (nav.audioSession) {
+        nav.audioSession.type = "playback";
+      }
+    } catch {
+      // audioSession API not available
+    }
+    try {
+      const audio = new Audio(SILENT_WAV);
+      audio.play().then(() => {
+        _audioSessionUnlocked = true;
+      }).catch(() => {});
+    } catch {
+      // Audio element not available
+    }
   }
 }
 
