@@ -59,8 +59,8 @@ During an active timer (running or paused, not finished), users can skip to the 
 ### Mobile — Swipe Gestures
 
 Horizontal swipe on the active screen:
-- **Swipe right** (left-to-right, deltaX > 50px): Skip forward to next segment
-- **Swipe left** (right-to-left, deltaX > 50px): Skip backward (restart current or go to previous)
+- **Swipe left** (right-to-left, deltaX > 50px): Skip forward to next segment
+- **Swipe right** (left-to-right, deltaX > 50px): Skip backward (restart current or go to previous)
 - Vertical swipes and short movements fall through to tap behavior (pause/resume)
 
 Implemented via `onpointerdown`/`onpointerup` handlers that track start position and compute delta on release. Critical CSS/JS for reliable mobile swipes:

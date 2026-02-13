@@ -163,7 +163,7 @@
 
   if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
    resumeAudioContext();
-   if (deltaX > 0) {
+   if (deltaX < 0) {
     timer.skipForward();
    } else {
     timer.skipBackward();

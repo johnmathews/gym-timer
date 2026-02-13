@@ -606,7 +606,7 @@ test.describe("Timer", () => {
     expect(touchAction).toBe("none");
   });
 
-  test("swipe right skips forward from getReady to work", async ({ page }) => {
+  test("swipe left skips forward from getReady to work", async ({ page }) => {
     // Need multi-rep so phase header shows
     await page.getByTestId("config-card-repeat").click();
     await page.getByTestId("ruler-tick-2").click({ force: true });
@@ -614,14 +614,14 @@ test.describe("Timer", () => {
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
 
-    // Swipe right (deltaX > 50)
+    // Swipe left (deltaX < -50) — like pulling next content in from the right
     const screen = page.getByTestId("active-screen");
     const box = await screen.boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx - 40, cy);
+    await page.mouse.move(cx + 40, cy);
     await page.mouse.down();
-    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.move(cx - 40, cy, { steps: 5 });
     await page.mouse.up();
 
     // Should have skipped forward to work phase, not paused
@@ -629,7 +629,7 @@ test.describe("Timer", () => {
     await expect(page.locator(".app")).not.toHaveClass(/paused/);
   });
 
-  test("swipe left skips backward from work to getReady", async ({ page }) => {
+  test("swipe right skips backward from work to getReady", async ({ page }) => {
     // Need multi-rep so phase header shows
     await page.getByTestId("config-card-repeat").click();
     await page.getByTestId("ruler-tick-2").click({ force: true });
@@ -640,14 +640,14 @@ test.describe("Timer", () => {
     await page.clock.fastForward(6000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
 
-    // Swipe left (deltaX < -50) — within 2s of segment start, goes to previous
+    // Swipe right (deltaX > 50) — like pulling previous content back in
     const screen = page.getByTestId("active-screen");
     const box = await screen.boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx + 40, cy);
+    await page.mouse.move(cx - 40, cy);
     await page.mouse.down();
-    await page.mouse.move(cx - 40, cy, { steps: 5 });
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
     await page.mouse.up();
 
     // Should have skipped backward to getReady
@@ -685,14 +685,14 @@ test.describe("Timer", () => {
     // Record countdown before skip (paused during getReady)
     const timeBefore = await page.getByTestId("countdown-time").textContent();
 
-    // Swipe right to skip forward
+    // Swipe left to skip forward
     const screen = page.getByTestId("active-screen");
     const box = await screen.boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx - 40, cy);
+    await page.mouse.move(cx + 40, cy);
     await page.mouse.down();
-    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.move(cx - 40, cy, { steps: 5 });
     await page.mouse.up();
 
     // Should still be paused (swipe doesn't resume)
