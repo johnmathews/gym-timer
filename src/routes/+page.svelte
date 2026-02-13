@@ -1,523 +1,539 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
-  import { createTimer, GET_READY_DURATION, playFinishSound, playRestStartSound, playWorkStartSound, initVolume, resumeAudioContext } from "$lib/timer";
-  import { log } from "$lib/logger";
-  import ConfigCard from "$lib/components/ConfigCard.svelte";
-  import RulerPicker from "$lib/components/RulerPicker.svelte";
-  import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
-  import CountdownDisplay from "$lib/components/CountdownDisplay.svelte";
-  import PhaseHeader from "$lib/components/PhaseHeader.svelte";
-  import VolumeControl from "$lib/components/VolumeControl.svelte";
-  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
+ import { onMount, onDestroy } from "svelte";
+ import {
+  createTimer,
+  GET_READY_DURATION,
+  playFinishSound,
+  playRestStartSound,
+  playWorkStartSound,
+  initVolume,
+  resumeAudioContext,
+ } from "$lib/timer";
+ import { log } from "$lib/logger";
+ import ConfigCard from "$lib/components/ConfigCard.svelte";
+ import RulerPicker from "$lib/components/RulerPicker.svelte";
+ import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
+ import CountdownDisplay from "$lib/components/CountdownDisplay.svelte";
+ import PhaseHeader from "$lib/components/PhaseHeader.svelte";
+ import VolumeControl from "$lib/components/VolumeControl.svelte";
+ import FullscreenButton from "$lib/components/FullscreenButton.svelte";
 
-  const timer = createTimer();
-  const { remaining, status, phase, currentRep, totalReps } = timer;
+ const timer = createTimer();
+ const { remaining, status, phase, currentRep, totalReps } = timer;
 
-  let duration = $state(30);
-  let rest = $state(10);
-  let reps = $state(3);
-  let prevStatus: string = "idle";
-  let prevPhase: string = "work";
-  let prevRep: number = 1;
+ let duration = $state(30);
+ let rest = $state(10);
+ let reps = $state(3);
+ let prevStatus: string = "idle";
+ let prevPhase: string = "work";
+ let prevRep: number = 1;
 
-  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
-  let pickerOriginalValue = $state(0);
+ let activePicker: "work" | "rest" | "repeat" | null = $state(null);
+ let pickerOriginalValue = $state(0);
 
-  // Wake lock: always-on when timer is active
-  let wakeLock: WakeLockSentinel | null = null;
-  let canWakeLock = $state(false);
+ // Wake lock: always-on when timer is active
+ let wakeLock: WakeLockSentinel | null = null;
+ let canWakeLock = $state(false);
 
-  async function acquireWakeLock() {
-    if (!canWakeLock) return;
-    try {
-      wakeLock = await navigator.wakeLock.request("screen");
-      wakeLock.addEventListener("release", () => { wakeLock = null; });
-    } catch {
-      // Wake lock request failed (e.g. page not visible)
-    }
+ async function acquireWakeLock() {
+  if (!canWakeLock) return;
+  try {
+   wakeLock = await navigator.wakeLock.request("screen");
+   wakeLock.addEventListener("release", () => {
+    wakeLock = null;
+   });
+  } catch {
+   // Wake lock request failed (e.g. page not visible)
   }
+ }
 
-  async function releaseWakeLock() {
-    if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-    }
+ async function releaseWakeLock() {
+  if (wakeLock) {
+   await wakeLock.release();
+   wakeLock = null;
   }
+ }
 
-  $effect(() => {
-    if (isActive && canWakeLock) {
-      acquireWakeLock();
-    } else {
-      releaseWakeLock();
-    }
-  });
-
-  onMount(() => {
-    canWakeLock = "wakeLock" in navigator;
-    initVolume();
-    log("mount", { duration, rest, reps });
-    timer.configure(duration, rest, reps);
-
-    function handleVisibility() {
-      if (document.visibilityState === "visible" && isActive && !wakeLock) {
-        acquireWakeLock();
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  });
-
-  onDestroy(() => {
-    releaseWakeLock();
-    timer.destroy();
-  });
-
-  function displayTime(totalSeconds: number): string {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${String(secs).padStart(2, "0")}`;
+ $effect(() => {
+  if (isActive && canWakeLock) {
+   acquireWakeLock();
+  } else {
+   releaseWakeLock();
   }
+ });
 
-  const totalTime = $derived(() => {
-    const workTotal = duration * reps;
-    const restTotal = rest * Math.max(0, reps - 1);
-    return workTotal + restTotal;
-  });
+ onMount(() => {
+  canWakeLock = "wakeLock" in navigator;
+  initVolume();
+  log("mount", { duration, rest, reps });
+  timer.configure(duration, rest, reps);
 
-  const totalTimeDisplay = $derived(displayTime(totalTime()));
-
-  function handleStart() {
-    resumeAudioContext();
-    let currentStatus: string;
-    status.subscribe((v) => (currentStatus = v))();
-    log("ui:start", { status: currentStatus! });
-    if (currentStatus! === "idle") {
-      timer.configure(duration, rest, reps);
-    }
-    timer.start();
+  function handleVisibility() {
+   if (document.visibilityState === "visible" && isActive && !wakeLock) {
+    acquireWakeLock();
+   }
   }
+  document.addEventListener("visibilitychange", handleVisibility);
+  return () => document.removeEventListener("visibilitychange", handleVisibility);
+ });
 
-  $effect(() => {
-    const s = $status;
-    const p = $phase;
-    const r = $currentRep;
-    if (s === "finished" && prevStatus !== "finished") {
-      log("ui:finishSound");
-      playFinishSound();
-    }
-    if (s === "running") {
-      if (p === "work" && (prevPhase !== "work" || r !== prevRep)) {
-        log("ui:workStartSound");
-        playWorkStartSound();
-      } else if (p === "rest" && prevPhase === "work") {
-        log("ui:restStartSound");
-        playRestStartSound();
-      }
-    }
-    prevStatus = s;
-    prevPhase = p;
-    prevRep = r;
-  });
+ onDestroy(() => {
+  releaseWakeLock();
+  timer.destroy();
+ });
 
-  const canStart = $derived(duration > 0);
-  const isFinished = $derived($status === "finished");
-  const isActive = $derived($status === "running" || $status === "paused");
-  const isPaused = $derived($status === "paused");
-  const isRunning = $derived($status === "running");
-  const isGetReady = $derived(isRunning && $phase === "getReady");
-  const isWork = $derived(isRunning && $phase === "work");
-  const isRest = $derived(isRunning && $phase === "rest");
+ function displayTime(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+ }
 
-  function handleScreenTap(e: MouseEvent) {
-    // Don't handle taps on buttons or toolbar controls
-    if ((e.target as HTMLElement).closest("button")) return;
-    if ((e.target as HTMLElement).closest(".active-toolbar")) return;
-    resumeAudioContext();
-    if ($status === "running") {
-      log("ui:pause");
-      timer.pause();
-    } else if ($status === "paused") {
-      log("ui:resume");
-      timer.start();
-    }
+ const totalTime = $derived(() => {
+  const workTotal = duration * reps;
+  const restTotal = rest * Math.max(0, reps - 1);
+  return workTotal + restTotal;
+ });
+
+ const totalTimeDisplay = $derived(displayTime(totalTime()));
+
+ function handleStart() {
+  resumeAudioContext();
+  let currentStatus: string;
+  status.subscribe((v) => (currentStatus = v))();
+  log("ui:start", { status: currentStatus! });
+  if (currentStatus! === "idle") {
+   timer.configure(duration, rest, reps);
   }
+  timer.start();
+ }
 
-  function handleResume() {
-    resumeAudioContext();
-    log("ui:resume");
-    timer.start();
+ $effect(() => {
+  const s = $status;
+  const p = $phase;
+  const r = $currentRep;
+  if (s === "finished" && prevStatus !== "finished") {
+   log("ui:finishSound");
+   playFinishSound();
   }
-
-  function handleReset() {
-    log("ui:reset");
-    timer.reset();
+  if (s === "running") {
+   if (p === "work" && (prevPhase !== "work" || r !== prevRep)) {
+    log("ui:workStartSound");
+    playWorkStartSound();
+   } else if (p === "rest" && prevPhase === "work") {
+    log("ui:restStartSound");
+    playRestStartSound();
+   }
   }
+  prevStatus = s;
+  prevPhase = p;
+  prevRep = r;
+ });
 
+ const canStart = $derived(duration > 0);
+ const isFinished = $derived($status === "finished");
+ const isActive = $derived($status === "running" || $status === "paused");
+ const isPaused = $derived($status === "paused");
+ const isRunning = $derived($status === "running");
+ const isGetReady = $derived(isRunning && $phase === "getReady");
+ const isWork = $derived(isRunning && $phase === "work");
+ const isRest = $derived(isRunning && $phase === "rest");
 
-  // Picker helpers
-  function openPicker(which: "work" | "rest" | "repeat") {
-    if (which === "work") pickerOriginalValue = duration;
-    else if (which === "rest") pickerOriginalValue = rest;
-    else pickerOriginalValue = reps;
-    activePicker = which;
+ function handleScreenTap(e: MouseEvent) {
+  // Don't handle taps on buttons or toolbar controls
+  if ((e.target as HTMLElement).closest("button")) return;
+  if ((e.target as HTMLElement).closest(".active-toolbar")) return;
+  resumeAudioContext();
+  if ($status === "running") {
+   log("ui:pause");
+   timer.pause();
+  } else if ($status === "paused") {
+   log("ui:resume");
+   timer.start();
   }
+ }
 
-  function handlePickerChange(value: number) {
-    if (activePicker === "work") duration = value;
-    else if (activePicker === "rest") rest = value;
-    else if (activePicker === "repeat") reps = value;
+ function handleResume() {
+  resumeAudioContext();
+  log("ui:resume");
+  timer.start();
+ }
+
+ function handleReset() {
+  log("ui:reset");
+  timer.reset();
+ }
+
+ // Picker helpers
+ function openPicker(which: "work" | "rest" | "repeat") {
+  if (which === "work") pickerOriginalValue = duration;
+  else if (which === "rest") pickerOriginalValue = rest;
+  else pickerOriginalValue = reps;
+  activePicker = which;
+ }
+
+ function handlePickerChange(value: number) {
+  if (activePicker === "work") duration = value;
+  else if (activePicker === "rest") rest = value;
+  else if (activePicker === "repeat") reps = value;
+ }
+
+ function closePicker() {
+  if (activePicker) {
+   log("pickerClose", { picker: activePicker, duration, rest, reps });
+   timer.configure(duration, rest, reps);
   }
+  activePicker = null;
+ }
 
-  function closePicker() {
-    if (activePicker) {
-      log("pickerClose", { picker: activePicker, duration, rest, reps });
-      timer.configure(duration, rest, reps);
-    }
-    activePicker = null;
+ function cancelPicker() {
+  if (activePicker === "work") duration = pickerOriginalValue;
+  else if (activePicker === "rest") rest = pickerOriginalValue;
+  else if (activePicker === "repeat") reps = pickerOriginalValue;
+  log("pickerCancel", { picker: activePicker });
+  activePicker = null;
+ }
+
+ function formatRulerTimeLabel(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  return `${m}:00`;
+ }
+
+ function formatRepLabel(val: number): string {
+  return `x${val}`;
+ }
+
+ // Non-uniform time scale: 5s steps up to 1min, 15s to 3min, 30s to max
+ function generateTimeValues(min: number, max: number): number[] {
+  const result: number[] = [];
+  let v = min;
+  while (v <= max) {
+   result.push(v);
+   if (v < 60) v += 5;
+   else if (v < 180) v += 15;
+   else v += 30;
   }
+  return result;
+ }
 
-  function cancelPicker() {
-    if (activePicker === "work") duration = pickerOriginalValue;
-    else if (activePicker === "rest") rest = pickerOriginalValue;
-    else if (activePicker === "repeat") reps = pickerOriginalValue;
-    log("pickerCancel", { picker: activePicker });
-    activePicker = null;
-  }
-
-  function formatRulerTimeLabel(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    return `${m}:00`;
-  }
-
-  function formatRepLabel(val: number): string {
-    return `x${val}`;
-  }
-
-  // Non-uniform time scale: 5s steps up to 1min, 15s to 3min, 30s to max
-  function generateTimeValues(min: number, max: number): number[] {
-    const result: number[] = [];
-    let v = min;
-    while (v <= max) {
-      result.push(v);
-      if (v < 60) v += 5;
-      else if (v < 180) v += 15;
-      else v += 30;
-    }
-    return result;
-  }
-
-  const workValues = generateTimeValues(5, 600);
-  const restValues = generateTimeValues(0, 300);
-  const repeatValues = Array.from({ length: 10 }, (_, i) => i + 1);
+ const workValues = generateTimeValues(5, 600);
+ const restValues = generateTimeValues(0, 300);
+ const repeatValues = Array.from({ length: 10 }, (_, i) => i + 1);
 </script>
 
 <svelte:head>
-  <title>Timer</title>
-  <meta name="description" content="Simple workout timer" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+ <title>Timer</title>
+ <meta name="description" content="Simple workout timer" />
+ <meta name="apple-mobile-web-app-capable" content="yes" />
+ <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </svelte:head>
 
 <main
-  class="app"
-  class:finished={isFinished}
-  class:getReady={isGetReady}
-  class:work={isWork}
-  class:rest={isRest}
-  class:paused={isPaused}
+ class="app"
+ class:finished={isFinished}
+ class:getReady={isGetReady}
+ class:work={isWork}
+ class:rest={isRest}
+ class:paused={isPaused}
 >
-  {#if $status === "idle" && !activePicker}
-    <!-- Idle: show config cards + total time -->
-    <div class="cards">
-      <ConfigCard
-        label="Work"
-        value={displayTime(duration)}
-        color="#2ECC71"
-        onclick={() => openPicker("work")}
-      />
-      <ConfigCard
-        label="Rest"
-        value={displayTime(rest)}
-        color="#E8450E"
-        onclick={() => openPicker("rest")}
-      />
-      <ConfigCard
-        label="Repeat"
-        value={`x${reps}`}
-        color="#3498DB"
-        onclick={() => openPicker("repeat")}
-      />
-    </div>
+ {#if $status === "idle" && !activePicker}
+  <!-- Idle: show config cards + total time -->
+  <div class="cards">
+   <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
+   <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
+   <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
+  </div>
 
-    <div class="toolbar">
-      <FullscreenButton />
-      <VolumeControl />
-    </div>
+  <div class="toolbar">
+   <FullscreenButton />
+   <VolumeControl />
+  </div>
 
-    <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
-  {:else if activePicker === "work"}
-    <RulerPicker
-      label="Work"
-      color="#2ECC71"
-      value={duration}
-      values={workValues}
-      formatValue={displayTime}
-      formatRulerLabel={formatRulerTimeLabel}
-      rulerLabelInterval={60}
-      onchange={handlePickerChange}
-      onclose={closePicker}
-      oncancel={cancelPicker}
-    />
-  {:else if activePicker === "rest"}
-    <RulerPicker
-      label="Rest"
-      color="#E8450E"
-      value={rest}
-      values={restValues}
-      formatValue={displayTime}
-      formatRulerLabel={formatRulerTimeLabel}
-      rulerLabelInterval={60}
-      onchange={handlePickerChange}
-      onclose={closePicker}
-      oncancel={cancelPicker}
-    />
-  {:else if activePicker === "repeat"}
-    <RulerPicker
-      label="Repeat"
-      color="#3498DB"
-      value={reps}
-      values={repeatValues}
-      formatValue={(v) => `x${v}`}
-      formatRulerLabel={formatRepLabel}
-      rulerLabelInterval={1}
-      onchange={handlePickerChange}
-      onclose={closePicker}
-      oncancel={cancelPicker}
-    />
-  {:else}
-    <!-- Running / Paused / Finished -->
-    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-    <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
-      <div class="active-toolbar">
-        <FullscreenButton />
-        <VolumeControl />
-      </div>
-      {#if !isPaused}
-        <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
-      {/if}
+  <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
+ {:else if activePicker === "work"}
+  <RulerPicker
+   label="Work"
+   color="#2ECC71"
+   value={duration}
+   values={workValues}
+   formatValue={displayTime}
+   formatRulerLabel={formatRulerTimeLabel}
+   rulerLabelInterval={60}
+   onchange={handlePickerChange}
+   onclose={closePicker}
+   oncancel={cancelPicker}
+  />
+ {:else if activePicker === "rest"}
+  <RulerPicker
+   label="Rest"
+   color="#E8450E"
+   value={rest}
+   values={restValues}
+   formatValue={displayTime}
+   formatRulerLabel={formatRulerTimeLabel}
+   rulerLabelInterval={60}
+   onchange={handlePickerChange}
+   onclose={closePicker}
+   oncancel={cancelPicker}
+  />
+ {:else if activePicker === "repeat"}
+  <RulerPicker
+   label="Repeat"
+   color="#3498DB"
+   value={reps}
+   values={repeatValues}
+   formatValue={(v) => `x${v}`}
+   formatRulerLabel={formatRepLabel}
+   rulerLabelInterval={1}
+   onchange={handlePickerChange}
+   onclose={closePicker}
+   oncancel={cancelPicker}
+  />
+ {:else}
+  <!-- Running / Paused / Finished -->
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
+   <div class="active-toolbar">
+    <FullscreenButton />
+    <VolumeControl />
+   </div>
+   {#if !isPaused}
+    <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
+   {/if}
 
-      <div class="countdown-area">
-        <CountdownDisplay remaining={$remaining} />
-      </div>
+   <div class="countdown-area">
+    <CountdownDisplay remaining={$remaining} />
+   </div>
 
-      <div class="controls">
-        {#if isPaused}
-          <!-- Reset, Play, Close buttons -->
-          <button class="icon-btn small-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
-            <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="#FFBA08" stroke-width="2.5" />
-              <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
-              <polyline points="17,21 17,26 22,26" fill="none" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <button class="icon-btn play-active-btn" data-testid="resume-button" onclick={handleResume} aria-label="Resume">
-            <svg viewBox="0 0 70 70" aria-hidden="true">
-              <circle cx="35" cy="35" r="35" fill="#FFBA08" />
-              <polygon points="28,20 28,50 52,35" fill="rgba(0,0,0,0.85)" />
-            </svg>
-          </button>
-        {:else if isFinished}
-          <button class="icon-btn small-btn finished-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
-            <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="currentColor" stroke-width="2.5" />
-              <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-              <polyline points="17,21 17,26 22,26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-        {/if}
-      </div>
-    </div>
-  {/if}
+   <div class="controls">
+    {#if isPaused}
+     <!-- Reset, Play, Close buttons -->
+     <button class="icon-btn small-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
+      <svg viewBox="0 0 50 50" aria-hidden="true">
+       <circle cx="25" cy="25" r="23" fill="none" stroke="#FFBA08" stroke-width="2.5" />
+       <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
+       <polyline
+        points="17,21 17,26 22,26"
+        fill="none"
+        stroke="#FFBA08"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+       />
+      </svg>
+     </button>
+     <button class="icon-btn play-active-btn" data-testid="resume-button" onclick={handleResume} aria-label="Resume">
+      <svg viewBox="0 0 70 70" aria-hidden="true">
+       <circle cx="35" cy="35" r="35" fill="#FFBA08" />
+       <polygon points="28,20 28,50 52,35" fill="rgba(0,0,0,0.85)" />
+      </svg>
+     </button>
+    {:else if isFinished}
+     <button class="icon-btn small-btn finished-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
+      <svg viewBox="0 0 50 50" aria-hidden="true">
+       <circle cx="25" cy="25" r="23" fill="none" stroke="currentColor" stroke-width="2.5" />
+       <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+       <polyline
+        points="17,21 17,26 22,26"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+       />
+      </svg>
+     </button>
+    {/if}
+   </div>
+  </div>
+ {/if}
 </main>
 
 <style>
-  :global(*, *::before, *::after) {
-    box-sizing: border-box;
-  }
+ :global(*, *::before, *::after) {
+  box-sizing: border-box;
+ }
 
-  :global(body) {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #000;
-    color: #fff;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
-  }
+ :global(body) {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #000;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+ }
 
-  @media (min-width: 768px) {
-    .app {
-      max-width: 640px;
-    }
-  }
-
+ @media (min-width: 768px) {
   .app {
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 60px 24px 0;
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: background-color 1s ease;
-    background: #000;
+   max-width: 640px;
   }
+ }
 
-  .cards {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
+ .app {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 60px 24px 0;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background-color 1s ease;
+  background: #000;
+ }
 
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 12px 0;
-  }
+ .cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+ }
 
-  /* Active states: full-viewport immersive */
-  .app.getReady,
-  .app.work,
-  .app.rest,
-  .app.finished,
-  .app.paused {
-    max-width: none;
-    padding: 0;
-  }
+ .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+ }
 
-  .app.getReady {
-    background-color: #FFBA08;
-  }
+ /* Active states: full-viewport immersive */
+ .app.getReady,
+ .app.work,
+ .app.rest,
+ .app.finished,
+ .app.paused {
+  max-width: none;
+  padding: 0;
+ }
 
-  .app.work {
-    background-color: #2ECC71;
-  }
+ .app.getReady {
+  background-color: #ffba08;
+ }
 
-  .app.rest {
-    background-color: #FFBA08;
-  }
+ .app.work {
+  background-color: #2ecc71;
+ }
 
-  .app.paused {
-    background-color: #000;
-  }
+ .app.rest {
+  background-color: #ffba08;
+ }
 
-  .app.finished {
-    animation: finished-flash 1s steps(1) 3 forwards;
-    background-color: #000;
-  }
+ .app.paused {
+  background-color: #000;
+ }
 
-  .app.finished :global(.time),
-  .app.finished .finished-btn {
-    animation: finished-flash-text 1s steps(1) 3 forwards;
-    color: #fff;
-  }
+ .app.finished {
+  animation: finished-flash 1s steps(1) 3 forwards;
+  background-color: #000;
+ }
 
-  /* Active screen layout */
-  .active-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    height: 100dvh;
-    overflow: hidden;
-  }
+ .app.finished :global(.time),
+ .app.finished .finished-btn {
+  animation: finished-flash-text 1s steps(1) 3 forwards;
+  color: #fff;
+ }
 
-  .active-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 12px 16px 0;
-    padding-top: max(12px, env(safe-area-inset-top));
-    flex-shrink: 0;
-    color: rgba(0, 0, 0, 0.85);
-  }
+ /* Active screen layout */
+ .active-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  height: 100dvh;
+  overflow: hidden;
+ }
 
-  .app.paused .active-toolbar,
-  .app.finished .active-toolbar {
-    color: #fff;
-  }
+ .active-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px 0;
+  padding-top: max(12px, env(safe-area-inset-top));
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.85);
+ }
 
-  .countdown-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-  }
+ .app.paused .active-toolbar,
+ .app.finished .active-toolbar {
+  color: #fff;
+ }
 
-  .controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding-bottom: max(32px, env(safe-area-inset-bottom));
-    flex-shrink: 0;
-  }
+ .countdown-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+ }
 
-  /* Paused state: amber time */
-  .app.paused :global(.time) {
-    color: #FFBA08;
-  }
+ .controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+ }
 
-  .icon-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    line-height: 0;
-  }
+ /* Paused state: amber time */
+ .app.paused :global(.time) {
+  color: #ffba08;
+ }
 
-  .icon-btn:active {
-    opacity: 0.7;
-    transform: scale(0.92);
-  }
+ .icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 0;
+ }
 
-  .play-active-btn {
-    width: 70px;
-    height: 70px;
-  }
+ .icon-btn:active {
+  opacity: 0.7;
+  transform: scale(0.92);
+ }
 
-  .play-active-btn svg {
-    width: 100%;
-    height: 100%;
-  }
+ .play-active-btn {
+  width: 70px;
+  height: 70px;
+ }
 
-  .small-btn {
-    width: 50px;
-    height: 50px;
-  }
+ .play-active-btn svg {
+  width: 100%;
+  height: 100%;
+ }
 
-  .small-btn svg {
-    width: 100%;
-    height: 100%;
-  }
+ .small-btn {
+  width: 50px;
+  height: 50px;
+ }
 
-  @keyframes finished-flash {
-    0% { background-color: #000; }
-    50% { background-color: #fff; }
-  }
+ .small-btn svg {
+  width: 100%;
+  height: 100%;
+ }
 
-  @keyframes finished-flash-text {
-    0% { color: #fff; }
-    50% { color: rgba(0, 0, 0, 0.85); }
+ @keyframes finished-flash {
+  0% {
+   background-color: #000;
   }
+  50% {
+   background-color: #fff;
+  }
+ }
+
+ @keyframes finished-flash-text {
+  0% {
+   color: #fff;
+  }
+  50% {
+   color: rgba(0, 0, 0, 0.85);
+  }
+ }
 </style>
