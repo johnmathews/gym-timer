@@ -63,7 +63,6 @@ test.describe('Timer', () => {
     await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
     await expect(page.getByTestId('countdown-time')).toBeVisible();
     await expect(page.getByTestId('active-screen')).toBeVisible();
-    await expect(page.getByTestId('pause-button')).toBeVisible();
   });
 
   test('getReady transitions to work phase', async ({ page }) => {
@@ -106,10 +105,6 @@ test.describe('Timer', () => {
 
     // Phase header should be hidden when paused
     await expect(page.getByTestId('phase-header')).not.toBeVisible();
-  });
-
-  test('does not show pause button when idle', async ({ page }) => {
-    await expect(page.getByTestId('pause-button')).not.toBeVisible();
   });
 
   test('counts down and finishes with alert', async ({ page }) => {
@@ -432,7 +427,6 @@ test.describe('Timer', () => {
     await expect(page.getByTestId('reset-button')).toBeVisible();
     await expect(page.getByTestId('close-button')).toBeVisible();
     await expect(page.getByTestId('resume-button')).not.toBeVisible();
-    await expect(page.getByTestId('pause-button')).not.toBeVisible();
   });
 
   test('progress bar has correct number of segments', async ({ page }) => {

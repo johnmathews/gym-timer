@@ -105,11 +105,6 @@
     }
   }
 
-  function handlePause() {
-    log("ui:pause");
-    timer.pause();
-  }
-
   function handleResume() {
     resumeAudioContext();
     log("ui:resume");
@@ -273,16 +268,7 @@
       </div>
 
       <div class="controls">
-        {#if isRunning}
-          <!-- Single pause button -->
-          <button class="icon-btn pause-btn" data-testid="pause-button" onclick={handlePause} aria-label="Pause">
-            <svg viewBox="0 0 70 70" aria-hidden="true">
-              <circle cx="35" cy="35" r="35" fill="rgba(0,0,0,0.85)" />
-              <rect x="23" y="20" width="8" height="30" rx="2" fill="currentColor" />
-              <rect x="39" y="20" width="8" height="30" rx="2" fill="currentColor" />
-            </svg>
-          </button>
-        {:else if isPaused}
+        {#if isPaused}
           <!-- Reset, Play, Close buttons -->
           <button class="icon-btn small-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
             <svg viewBox="0 0 50 50" aria-hidden="true">
@@ -469,29 +455,6 @@
   .icon-btn:active {
     opacity: 0.7;
     transform: scale(0.92);
-  }
-
-  .pause-btn {
-    width: 70px;
-    height: 70px;
-  }
-
-  .pause-btn svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Color for pause bars matches background */
-  .app.getReady .pause-btn svg {
-    color: #FFBA08;
-  }
-
-  .app.work .pause-btn svg {
-    color: #2ECC71;
-  }
-
-  .app.rest .pause-btn svg {
-    color: #FFBA08;
   }
 
   .play-active-btn {
