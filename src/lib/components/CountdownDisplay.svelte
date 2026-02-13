@@ -18,11 +18,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: min(2rem, 3vh);
   }
 
   .time {
-    font-size: min(25vw, 10rem);
+    font-size: min(25vw, 10rem, 30vh);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;

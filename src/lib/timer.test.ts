@@ -550,10 +550,10 @@ describe("master volume", () => {
     expect(getMasterVolume()).toBe(1.0);
   });
 
-  it("default volume is half of MAX_VOLUME and not zero", () => {
+  it("default volume is 75% of MAX_VOLUME and not zero", () => {
     localStorage.clear();
     initVolume(); // no localStorage value — should use the built-in default
-    expect(getMasterVolume()).toBe(MAX_VOLUME / 2);
+    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.75);
     expect(getMasterVolume()).toBeGreaterThan(0);
   });
 
@@ -581,17 +581,17 @@ describe("master volume", () => {
 
   it("setMasterVolume writes to localStorage", () => {
     setMasterVolume(0.7);
-    expect(localStorage.getItem("gym-timer-volume")).toBe("0.7");
+    expect(localStorage.getItem("timer-volume")).toBe("0.7");
   });
 
   it("initVolume reads from localStorage", () => {
-    localStorage.setItem("gym-timer-volume", "0.3");
+    localStorage.setItem("timer-volume", "0.3");
     initVolume();
     expect(getMasterVolume()).toBe(0.3);
   });
 
   it("initVolume ignores invalid localStorage values", () => {
-    localStorage.setItem("gym-timer-volume", "notanumber");
+    localStorage.setItem("timer-volume", "notanumber");
     setMasterVolume(0.8);
     initVolume();
     expect(getMasterVolume()).toBe(0.8);

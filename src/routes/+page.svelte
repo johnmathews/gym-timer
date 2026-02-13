@@ -15,7 +15,7 @@
 
   let duration = $state(30);
   let rest = $state(10);
-  let reps = $state(1);
+  let reps = $state(3);
   let prevStatus: string = "idle";
   let prevPhase: string = "work";
   let prevRep: number = 1;
@@ -165,8 +165,8 @@
 </script>
 
 <svelte:head>
-  <title>Gym Timer</title>
-  <meta name="description" content="Simple gym workout timer" />
+  <title>Timer</title>
+  <meta name="description" content="Simple workout timer" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </svelte:head>
@@ -410,7 +410,8 @@
     width: 100%;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .active-toolbar {
@@ -421,6 +422,12 @@
     padding: 12px 16px 0;
     padding-top: max(12px, env(safe-area-inset-top));
     flex-shrink: 0;
+    color: rgba(0, 0, 0, 0.85);
+  }
+
+  .app.paused .active-toolbar,
+  .app.finished .active-toolbar {
+    color: #fff;
   }
 
   .countdown-area {
@@ -428,6 +435,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 0;
   }
 
   .controls {

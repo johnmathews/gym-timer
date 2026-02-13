@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // GET_READY_DURATION is 5 seconds
 const GET_READY_MS = 5000;
 
-test.describe('Gym Timer', () => {
+test.describe('Timer', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
@@ -17,7 +17,7 @@ test.describe('Gym Timer', () => {
   test('config cards show default values', async ({ page }) => {
     await expect(page.getByTestId('config-card-work')).toContainText('0:30');
     await expect(page.getByTestId('config-card-rest')).toContainText('0:10');
-    await expect(page.getByTestId('config-card-repeat')).toContainText('x1');
+    await expect(page.getByTestId('config-card-repeat')).toContainText('x3');
   });
 
   test('shows total time and play button', async ({ page }) => {
@@ -26,8 +26,8 @@ test.describe('Gym Timer', () => {
   });
 
   test('total time is calculated correctly', async ({ page }) => {
-    // Default: 30s work * 1 rep + 0 rest = 30s total => 0:30
-    await expect(page.getByTestId('total-time')).toHaveText('0:30');
+    // Default: 30s work * 3 reps + 10s rest * 2 = 110s total => 1:50
+    await expect(page.getByTestId('total-time')).toHaveText('1:50');
   });
 
   test('tapping work card opens ruler picker', async ({ page }) => {
@@ -116,6 +116,10 @@ test.describe('Gym Timer', () => {
     // Set duration to 5s via ruler picker (auto-closes on selection)
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    // Set reps to 1 for quick finish
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
 
     await page.getByTestId('play-button').click();
 
@@ -244,6 +248,10 @@ test.describe('Gym Timer', () => {
   });
 
   test('no rep counter for single rep', async ({ page }) => {
+    // Set reps to 1
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
+
     await page.getByTestId('play-button').click();
     await expect(page.getByTestId('rep-counter')).not.toBeVisible();
   });
@@ -327,6 +335,10 @@ test.describe('Gym Timer', () => {
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
 
+    // Set reps to 1 for quick finish
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
+
     await page.getByTestId('play-button').click();
     // getReady 5s + work 5s = 10s
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
@@ -390,6 +402,10 @@ test.describe('Gym Timer', () => {
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
 
+    // Set reps to 1 for quick finish
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
+
     await page.getByTestId('play-button').click();
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
 
@@ -405,6 +421,10 @@ test.describe('Gym Timer', () => {
   test('finished state shows reset and close buttons but no resume', async ({ page }) => {
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    // Set reps to 1 for quick finish
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
 
     await page.getByTestId('play-button').click();
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
@@ -440,6 +460,10 @@ test.describe('Gym Timer', () => {
   test('can start a new workout after finishing', async ({ page }) => {
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
+
+    // Set reps to 1 for quick finish
+    await page.getByTestId('config-card-repeat').click();
+    await page.getByTestId('ruler-tick-1').click({ force: true });
 
     await page.getByTestId('play-button').click();
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00', { timeout: 12000 });
@@ -496,7 +520,7 @@ test.describe('Gym Timer', () => {
     const slider = page.getByLabel('Volume level');
     await slider.fill('1600');
     // Verify localStorage was updated (slider max=3200, so 1600 maps to 16.0)
-    const stored = await page.evaluate(() => localStorage.getItem('gym-timer-volume'));
+    const stored = await page.evaluate(() => localStorage.getItem('timer-volume'));
     expect(stored).toBe('16');
   });
 

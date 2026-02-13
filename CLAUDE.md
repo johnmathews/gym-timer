@@ -1,4 +1,4 @@
-# Gym Timer
+# Timer
 
 ## Code Style
 - Use spaces, not tabs, for indentation
@@ -19,7 +19,7 @@
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons)
-- `src/lib/timer.test.ts` — 56 unit tests
+- `src/lib/timer.test.ts` — 57 unit tests
 - `tests/timer.test.ts` — 40 e2e tests (Playwright)
 
 ## Timer Phases

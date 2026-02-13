@@ -6,9 +6,9 @@ export type TimerPhase = "getReady" | "work" | "rest";
 
 export const GET_READY_DURATION = 5;
 
-const VOLUME_STORAGE_KEY = "gym-timer-volume";
+const VOLUME_STORAGE_KEY = "timer-volume";
 export const MAX_VOLUME = 32.0;
-let _masterVolume = MAX_VOLUME / 2;
+let _masterVolume = MAX_VOLUME * 0.75;
 
 export function getMasterVolume(): number {
   return _masterVolume;
@@ -23,7 +23,7 @@ export function setMasterVolume(v: number): void {
   }
 }
 
-const DEFAULT_VOLUME = MAX_VOLUME / 2;
+const DEFAULT_VOLUME = MAX_VOLUME * 0.75;
 
 export function initVolume(): void {
   _masterVolume = DEFAULT_VOLUME;

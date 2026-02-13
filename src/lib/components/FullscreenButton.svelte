@@ -3,6 +3,7 @@
 
   let isFullscreen = $state(false);
   let canFullscreen = $state(false);
+  let isStandalone = $state(false);
   let showHint = $state(false);
   let hintTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -20,6 +21,8 @@
     const el = document.documentElement as any;
     canFullscreen = !!(el.requestFullscreen || el.webkitRequestFullscreen);
     isFullscreen = !!getFullscreenElement();
+    isStandalone = (navigator as any).standalone === true
+      || window.matchMedia("(display-mode: standalone)").matches;
     document.addEventListener("fullscreenchange", handleChange);
     document.addEventListener("webkitfullscreenchange", handleChange);
   });
@@ -56,9 +59,10 @@
   }
 </script>
 
+{#if !(isStandalone && !canFullscreen)}
 <div class="fullscreen-wrapper">
   <button class="fullscreen-btn" onclick={toggle} aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       {#if isFullscreen}
         <!-- Compress arrows -->
         <polyline points="4,14 10,14 10,20" />
@@ -80,6 +84,7 @@
     </div>
   {/if}
 </div>
+{/if}
 
 <style>
   .fullscreen-wrapper {
