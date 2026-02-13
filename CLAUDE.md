@@ -17,10 +17,12 @@
 
 ## Key Files
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
-- `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton
+- `src/lib/presets.ts` — built-in workout presets (Tabata, EMOM, etc.)
+- `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 68 unit tests
-- `tests/timer.test.ts` — 39 e2e tests (Playwright)
+- `src/lib/presets.test.ts` — preset validation tests
+- `tests/timer.test.ts` — 48 e2e tests (Playwright)
 - `documentation/` — detailed docs (timer engine, audio, slider scales, wake lock, design)
 
 ## Timer Phases

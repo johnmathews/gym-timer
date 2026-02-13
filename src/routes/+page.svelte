@@ -17,6 +17,8 @@
  import PhaseHeader from "$lib/components/PhaseHeader.svelte";
  import VolumeControl from "$lib/components/VolumeControl.svelte";
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
+ import PresetList from "$lib/components/PresetList.svelte";
+ import { PRESETS } from "$lib/presets";
 
  const timer = createTimer();
  const { remaining, status, phase, currentRep, totalReps } = timer;
@@ -30,6 +32,7 @@
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
+ let showPresets = $state(false);
 
  // Wake lock: always-on when timer is active
  let wakeLock: WakeLockSentinel | null = null;
@@ -217,6 +220,14 @@
   activePicker = null;
  }
 
+ function handlePresetSelect(preset: { work: number; rest: number; reps: number }) {
+  duration = preset.work;
+  rest = preset.rest;
+  reps = preset.reps;
+  timer.configure(duration, rest, reps);
+  showPresets = false;
+ }
+
  function formatRulerTimeLabel(seconds: number): string {
   const m = Math.floor(seconds / 60);
   return `${m}:00`;
@@ -259,7 +270,7 @@
  class:rest={isRest}
  class:paused={isPaused}
 >
- {#if $status === "idle" && !activePicker}
+ {#if $status === "idle" && !activePicker && !showPresets}
   <!-- Idle: show config cards + total time -->
   <div class="cards">
    <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
@@ -269,10 +280,19 @@
 
   <div class="toolbar">
    <FullscreenButton />
+   <button class="icon-btn" data-testid="presets-button" onclick={() => showPresets = true} aria-label="Workouts">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+     <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+     <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+     <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+   </button>
    <VolumeControl />
   </div>
 
   <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
+ {:else if showPresets}
+  <PresetList presets={PRESETS} onselect={handlePresetSelect} onclose={() => showPresets = false} />
  {:else if activePicker === "work"}
   <RulerPicker
    label="Work"
@@ -569,6 +589,7 @@
  .icon-btn {
   background: none;
   border: none;
+  color: inherit;
   cursor: pointer;
   padding: 0;
   touch-action: manipulation;

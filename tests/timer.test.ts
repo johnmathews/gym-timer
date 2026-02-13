@@ -525,4 +525,62 @@ test.describe('Timer', () => {
     await expect(page.getByRole('button', { name: 'Volume' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enter fullscreen' })).toBeVisible();
   });
+
+  // --- Presets ---
+
+  test('presets button is visible on idle screen', async ({ page }) => {
+    await expect(page.getByTestId('presets-button')).toBeVisible();
+  });
+
+  test('presets button opens preset list overlay', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await expect(page.getByTestId('preset-list')).toBeVisible();
+    await expect(page.getByText('Workouts')).toBeVisible();
+  });
+
+  test('preset list shows cancel button', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  });
+
+  test('cancel closes preset list and keeps original values', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByTestId('preset-list')).not.toBeVisible();
+    await expect(page.getByTestId('config-card-work')).toContainText('0:30');
+    await expect(page.getByTestId('config-card-rest')).toContainText('0:10');
+    await expect(page.getByTestId('config-card-repeat')).toContainText('x3');
+  });
+
+  test('selecting Tabata preset populates sliders', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await page.getByTestId('preset-tabata').click();
+    await expect(page.getByTestId('preset-list')).not.toBeVisible();
+    await expect(page.getByTestId('config-card-work')).toContainText('0:20');
+    await expect(page.getByTestId('config-card-rest')).toContainText('0:10');
+    await expect(page.getByTestId('config-card-repeat')).toContainText('x8');
+  });
+
+  test('selecting Long Sets preset populates sliders', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await page.getByTestId('preset-long-sets').click();
+    await expect(page.getByTestId('config-card-work')).toContainText('2:00');
+    await expect(page.getByTestId('config-card-rest')).toContainText('1:00');
+    await expect(page.getByTestId('config-card-repeat')).toContainText('x3');
+  });
+
+  test('total time updates after preset selection', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await page.getByTestId('preset-tabata').click();
+    // Tabata: 20s work * 8 + 10s rest * 7 = 160 + 70 = 230s = 3:50
+    await expect(page.getByTestId('total-time')).toHaveText('3:50');
+  });
+
+  test('can start timer after preset selection', async ({ page }) => {
+    await page.getByTestId('presets-button').click();
+    await page.getByTestId('preset-tabata').click();
+    await page.getByTestId('play-button').click();
+    await expect(page.getByTestId('phase-label')).toHaveText('Get Ready!');
+    await expect(page.getByTestId('countdown-time')).toHaveText('00:05');
+  });
 });
