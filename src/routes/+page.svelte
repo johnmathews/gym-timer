@@ -153,10 +153,6 @@
     timer.reset();
   }
 
-  function handleClose() {
-    log("ui:close");
-    timer.reset();
-  }
 
   // Picker helpers
   function openPicker(which: "work" | "rest" | "repeat") {
@@ -330,27 +326,12 @@
               <polygon points="28,20 28,50 52,35" fill="rgba(0,0,0,0.85)" />
             </svg>
           </button>
-          <button class="icon-btn small-btn" data-testid="close-button" onclick={handleClose} aria-label="Close">
-            <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="#FFBA08" stroke-width="2.5" />
-              <line x1="17" y1="17" x2="33" y2="33" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="33" y1="17" x2="17" y2="33" stroke="#FFBA08" stroke-width="2.5" stroke-linecap="round" />
-            </svg>
-          </button>
         {:else if isFinished}
-          <!-- Reset + Close buttons -->
           <button class="icon-btn small-btn finished-btn" data-testid="reset-button" onclick={handleReset} aria-label="Reset">
             <svg viewBox="0 0 50 50" aria-hidden="true">
               <circle cx="25" cy="25" r="23" fill="none" stroke="currentColor" stroke-width="2.5" />
               <path d="M17 25a9 9 0 1 1 2.5 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
               <polyline points="17,21 17,26 22,26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <button class="icon-btn small-btn finished-btn" data-testid="close-button" onclick={handleClose} aria-label="Close">
-            <svg viewBox="0 0 50 50" aria-hidden="true">
-              <circle cx="25" cy="25" r="23" fill="none" stroke="currentColor" stroke-width="2.5" />
-              <line x1="17" y1="17" x2="33" y2="33" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="33" y1="17" x2="17" y2="33" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
             </svg>
           </button>
         {/if}

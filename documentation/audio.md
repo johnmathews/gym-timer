@@ -18,7 +18,8 @@ Each sound is built from overlapping sine wave oscillators with exponential deca
 
 Volume is controlled by `_masterVolume`, a multiplier applied to every tone:
 
-- **Range**: 0 to `MAX_VOLUME` (32.0)
+- **Mobile range**: 0 to `MAX_VOLUME` (32.0 = 3200% boost)
+- **Desktop range**: 0 to `DESKTOP_MAX_VOLUME` (16.0 = 1600% boost)
 - **Mobile default**: 60% of MAX_VOLUME (19.2)
 - **Desktop default**: 40% of MAX_VOLUME (12.8)
 - **Persisted** in `localStorage` under key `timer-volume`

@@ -1,23 +1,29 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getMasterVolume, setMasterVolume, initVolume, MAX_VOLUME } from "$lib/timer";
+  import { getMasterVolume, setMasterVolume, initVolume, MAX_VOLUME, DESKTOP_MAX_VOLUME } from "$lib/timer";
 
   const SLIDER_MAX = 1000;
   let sliderValue = $state(0);
   let open = $state(false);
   let containerEl: HTMLDivElement | undefined = $state();
+  let maxVolume = MAX_VOLUME;
 
   /** Quadratic curve: most of the slider covers the quiet range. */
   function sliderToVolume(s: number): number {
     const t = s / SLIDER_MAX; // 0 to 1
-    return t * t * MAX_VOLUME;
+    return t * t * maxVolume;
   }
 
   function volumeToSlider(v: number): number {
-    return Math.round(Math.sqrt(v / MAX_VOLUME) * SLIDER_MAX);
+    return Math.round(Math.sqrt(Math.min(v, maxVolume) / maxVolume) * SLIDER_MAX);
   }
 
   onMount(() => {
+    try {
+      if (window.matchMedia("(hover: hover)").matches) {
+        maxVolume = DESKTOP_MAX_VOLUME;
+      }
+    } catch {}
     initVolume();
     sliderValue = volumeToSlider(getMasterVolume());
 

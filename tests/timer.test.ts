@@ -97,10 +97,9 @@ test.describe('Timer', () => {
     const app = page.locator('.app');
     await expect(app).toHaveClass(/paused/);
 
-    // Should show resume, reset, and close buttons
+    // Should show resume and reset buttons
     await expect(page.getByTestId('resume-button')).toBeVisible();
     await expect(page.getByTestId('reset-button')).toBeVisible();
-    await expect(page.getByTestId('close-button')).toBeVisible();
 
     // Phase header should be hidden when paused
     await expect(page.getByTestId('phase-header')).not.toBeVisible();
@@ -159,20 +158,6 @@ test.describe('Timer', () => {
     // Should be back to config cards
     await expect(page.getByTestId('config-card-work')).toBeVisible();
     await expect(page.getByTestId('total-time')).toBeVisible();
-  });
-
-  test('close button returns to idle', async ({ page }) => {
-    await page.getByTestId('play-button').click();
-
-    // Pause immediately
-    await page.getByTestId('active-screen').click();
-    await expect(page.locator('.app')).toHaveClass(/paused/);
-
-    // Click close button
-    await page.getByTestId('close-button').click();
-
-    // Should be back to config cards
-    await expect(page.getByTestId('config-card-work')).toBeVisible();
   });
 
   test('app is constrained to max-width on desktop', async ({ page }) => {
@@ -419,7 +404,7 @@ test.describe('Timer', () => {
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00');
   });
 
-  test('finished state shows reset and close buttons but no resume', async ({ page }) => {
+  test('finished state shows reset button but no resume', async ({ page }) => {
     await page.getByTestId('config-card-work').click();
     await page.getByTestId('ruler-tick-5').click({ force: true });
 
@@ -431,7 +416,6 @@ test.describe('Timer', () => {
     await page.clock.fastForward(11000);
 
     await expect(page.getByTestId('reset-button')).toBeVisible();
-    await expect(page.getByTestId('close-button')).toBeVisible();
     await expect(page.getByTestId('resume-button')).not.toBeVisible();
   });
 
@@ -470,8 +454,8 @@ test.describe('Timer', () => {
     await page.clock.fastForward(11000);
     await expect(page.getByTestId('countdown-time')).toHaveText('00:00');
 
-    // Click close to go back to idle
-    await page.getByTestId('close-button').click();
+    // Click reset to go back to idle
+    await page.getByTestId('reset-button').click();
     await expect(page.getByTestId('config-card-work')).toBeVisible();
 
     // Start again
@@ -520,9 +504,9 @@ test.describe('Timer', () => {
     await page.getByLabel('Volume').click();
     const slider = page.getByLabel('Volume level');
     await slider.fill('500');
-    // Quadratic mapping: (500/1000)^2 * 32 = 8.0
+    // Quadratic mapping on desktop (hover): (500/1000)^2 * 16 = 4.0
     const stored = await page.evaluate(() => localStorage.getItem('timer-volume'));
-    expect(stored).toBe('8');
+    expect(stored).toBe('4');
   });
 
   test('volume and fullscreen icons visible during active timer', async ({ page }) => {

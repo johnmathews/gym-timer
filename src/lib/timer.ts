@@ -8,6 +8,7 @@ export const GET_READY_DURATION = 5;
 
 const VOLUME_STORAGE_KEY = "timer-volume";
 export const MAX_VOLUME = 32.0;
+export const DESKTOP_MAX_VOLUME = 16.0;
 let _masterVolume = MAX_VOLUME * 0.60;
 
 export function getMasterVolume(): number {
