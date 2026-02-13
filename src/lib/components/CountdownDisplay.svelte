@@ -22,10 +22,16 @@
   }
 
   .time {
-    font-size: min(25vw, 10rem, 30vh);
+    font-size: min(30vw, 35vh);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
     color: rgba(0, 0, 0, 0.85);
+  }
+
+  @media (min-width: 768px) {
+    .time {
+      font-size: min(20vw, 40vh);
+    }
   }
 </style>

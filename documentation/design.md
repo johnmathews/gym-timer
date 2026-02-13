@@ -1,0 +1,68 @@
+# Visual Design
+
+## Layout
+
+The app uses a single-page layout centered on screen with a maximum width constraint:
+
+- **Mobile**: max-width 500px
+- **Desktop** (≥768px viewport): max-width 640px
+
+The layout is a vertical flex column with three sections:
+1. **Config area** (idle) or **Phase header** (active) — top
+2. **Countdown display** — center, fills available space
+3. **Toolbar** — bottom, with action buttons
+
+## Color Scheme
+
+| State         | Background Color | Text Color |
+|---------------|-----------------|------------|
+| Idle          | `#000` (black)  | White      |
+| Get Ready     | `#FFBA08` (yellow) | Black   |
+| Work          | `#2ECC71` (green)  | Black   |
+| Rest          | `#FFBA08` (yellow) | Black   |
+| Paused        | `#000` (black)  | White      |
+| Finished      | Black/white flash (3s) | Inverse |
+
+The full-screen background color provides an unmistakable visual signal of the current phase — visible from across the gym.
+
+## Typography
+
+- Countdown display uses a large monospace-friendly font stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace`
+- `font-variant-numeric: tabular-nums` ensures digits don't shift as the countdown changes
+- Base countdown size: `min(30vw, 35vh)`
+- Desktop countdown size: `min(20vw, 40vh)` — larger since there's more empty space
+
+## Responsive Breakpoints
+
+Desktop breakpoint: `@media (min-width: 768px)` is used for:
+- Wider app container (500px → 640px)
+- Larger countdown font
+- Chunkier progress bar segments (8px → 12px height, 4px → 6px radius)
+- Larger phase labels (1.75rem → 2rem)
+
+## Buttons & Icons
+
+- Circular icon buttons using inline SVG with `currentColor`
+- Buttons need explicit `color: inherit` — iOS Safari defaults button text to system blue
+- Touch targets use `touch-action: manipulation` to prevent double-tap zoom
+
+## PWA / Standalone Mode
+
+- Fullscreen button is hidden when running as an installed PWA (already fullscreen)
+- Detected via `navigator.standalone` (iOS) or `display-mode: standalone` media query
+- Safe area insets respected via `env(safe-area-inset-bottom)` for notched devices
+
+## Config Cards
+
+Idle screen shows three config cards (Work, Rest, Repeats) that open full-screen ruler pickers when tapped. Each card displays:
+- Label (e.g., "Work")
+- Formatted current value (e.g., "00:30")
+- Colored accent matching the phase color
+
+## Progress Bar
+
+During active timer, a segmented progress bar shows:
+- One segment per phase (getReady + work/rest pairs)
+- Current segment fills proportionally based on time remaining
+- Completed segments are fully filled
+- Phase label and rep counter displayed above

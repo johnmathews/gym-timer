@@ -24,6 +24,7 @@ export function setMasterVolume(v: number): void {
 }
 
 const DEFAULT_VOLUME = MAX_VOLUME * 0.60;
+const DESKTOP_DEFAULT_VOLUME = MAX_VOLUME * 0.40;
 
 export function initVolume(): void {
   _masterVolume = DEFAULT_VOLUME;
@@ -33,10 +34,19 @@ export function initVolume(): void {
       const parsed = parseFloat(stored);
       if (!isNaN(parsed)) {
         _masterVolume = Math.max(0, Math.min(MAX_VOLUME, parsed));
+        return;
       }
     }
   } catch {
     // localStorage not available
+  }
+  // No stored value — use lower default on desktop (hover-capable devices)
+  try {
+    if (typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches) {
+      _masterVolume = DESKTOP_DEFAULT_VOLUME;
+    }
+  } catch {
+    // matchMedia not available
   }
 }
 

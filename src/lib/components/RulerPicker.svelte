@@ -3,9 +3,7 @@
     label: string;
     color: string;
     value: number;
-    minValue?: number;
-    maxValue: number;
-    step: number;
+    values: number[];
     formatValue: (v: number) => string;
     formatRulerLabel: (v: number) => string;
     rulerLabelInterval: number;
@@ -18,9 +16,7 @@
     label,
     color,
     value,
-    minValue = 0,
-    maxValue,
-    step,
+    values,
     formatValue,
     formatRulerLabel,
     rulerLabelInterval,
@@ -31,23 +27,16 @@
 
   let rulerEl: HTMLDivElement | undefined = $state(undefined);
 
-  const fillPercent = $derived(Math.min((value / maxValue) * 100, 100));
+  const maxIndex = $derived(values.length - 1);
+  const valueIndex = $derived(Math.max(0, values.indexOf(value)));
+  const fillPercent = $derived(maxIndex <= 0 ? 0 : (valueIndex / maxIndex) * 100);
 
-  // Generate tick values from step to maxValue
-  const ticks = $derived.by(() => {
-    const result: number[] = [];
-    for (let v = step; v <= maxValue; v += step) {
-      result.push(v);
-    }
-    return result;
-  });
-
-  function tickPercent(tickValue: number): number {
-    return (tickValue / maxValue) * 100;
+  function tickPercent(index: number): number {
+    return maxIndex <= 0 ? 0 : (index / maxIndex) * 100;
   }
 
   function isLabelTick(tickValue: number): boolean {
-    return tickValue % rulerLabelInterval === 0;
+    return tickValue > 0 && tickValue % rulerLabelInterval === 0;
   }
 
   function valueFromY(clientY: number): number {
@@ -55,9 +44,8 @@
     const rect = rulerEl.getBoundingClientRect();
     const y = clientY - rect.top;
     const percent = Math.max(0, Math.min(y / rect.height, 1));
-    const raw = percent * maxValue;
-    const snapped = Math.round(raw / step) * step;
-    return Math.max(minValue, Math.min(snapped, maxValue));
+    const index = Math.round(percent * maxIndex);
+    return values[index];
   }
 
   function handlePointerDown(e: PointerEvent) {
@@ -111,9 +99,9 @@
       <div class="handle-pill"></div>
     </div>
 
-    <!-- Tick marks (fixed positions, always visible below fill) -->
-    {#each ticks as tickVal}
-      {@const pct = tickPercent(tickVal)}
+    <!-- Tick marks (uniformly spaced, always visible below fill) -->
+    {#each values as tickVal, i}
+      {@const pct = tickPercent(i)}
       {@const isLabel = isLabelTick(tickVal)}
       <div
         class="tick"

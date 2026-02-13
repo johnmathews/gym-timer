@@ -76,4 +76,20 @@
   .segment.active {
     background: rgba(0, 0, 0, 0.7);
   }
+
+  @media (min-width: 768px) {
+    .phase-label,
+    .rep-counter {
+      font-size: 2rem;
+    }
+
+    .progress-bar {
+      gap: 8px;
+    }
+
+    .segment {
+      height: 12px;
+      border-radius: 6px;
+    }
+  }
 </style>

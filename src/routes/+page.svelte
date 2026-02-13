@@ -9,7 +9,6 @@
   import PhaseHeader from "$lib/components/PhaseHeader.svelte";
   import VolumeControl from "$lib/components/VolumeControl.svelte";
   import FullscreenButton from "$lib/components/FullscreenButton.svelte";
-  import WakeLockButton from "$lib/components/WakeLockButton.svelte";
 
   const timer = createTimer();
   const { remaining, status, phase, currentRep, totalReps } = timer;
@@ -23,15 +22,53 @@
 
   let activePicker: "work" | "rest" | "repeat" | null = $state(null);
   let pickerOriginalValue = $state(0);
-  let wakeLockEnabled = $state(true);
+
+  // Wake lock: always-on when timer is active
+  let wakeLock: WakeLockSentinel | null = null;
+  let canWakeLock = $state(false);
+
+  async function acquireWakeLock() {
+    if (!canWakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    } catch {
+      // Wake lock request failed (e.g. page not visible)
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  }
+
+  $effect(() => {
+    if (isActive && canWakeLock) {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+  });
 
   onMount(() => {
+    canWakeLock = "wakeLock" in navigator;
     initVolume();
     log("mount", { duration, rest, reps });
     timer.configure(duration, rest, reps);
+
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && isActive && !wakeLock) {
+        acquireWakeLock();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   });
 
   onDestroy(() => {
+    releaseWakeLock();
     timer.destroy();
   });
 
@@ -159,6 +196,23 @@
   function formatRepLabel(val: number): string {
     return `x${val}`;
   }
+
+  // Non-uniform time scale: 5s steps up to 1min, 15s to 3min, 30s to max
+  function generateTimeValues(min: number, max: number): number[] {
+    const result: number[] = [];
+    let v = min;
+    while (v <= max) {
+      result.push(v);
+      if (v < 60) v += 5;
+      else if (v < 180) v += 15;
+      else v += 30;
+    }
+    return result;
+  }
+
+  const workValues = generateTimeValues(5, 600);
+  const restValues = generateTimeValues(0, 300);
+  const repeatValues = Array.from({ length: 10 }, (_, i) => i + 1);
 </script>
 
 <svelte:head>
@@ -201,7 +255,6 @@
 
     <div class="toolbar">
       <FullscreenButton />
-      <WakeLockButton bind:enabled={wakeLockEnabled} timerActive={isActive} />
       <VolumeControl />
     </div>
 
@@ -211,9 +264,7 @@
       label="Work"
       color="#2ECC71"
       value={duration}
-      minValue={5}
-      maxValue={360}
-      step={5}
+      values={workValues}
       formatValue={displayTime}
       formatRulerLabel={formatRulerTimeLabel}
       rulerLabelInterval={60}
@@ -226,8 +277,7 @@
       label="Rest"
       color="#E8450E"
       value={rest}
-      maxValue={120}
-      step={5}
+      values={restValues}
       formatValue={displayTime}
       formatRulerLabel={formatRulerTimeLabel}
       rulerLabelInterval={60}
@@ -240,9 +290,7 @@
       label="Repeat"
       color="#3498DB"
       value={reps}
-      minValue={1}
-      maxValue={10}
-      step={1}
+      values={repeatValues}
       formatValue={(v) => `x${v}`}
       formatRulerLabel={formatRepLabel}
       rulerLabelInterval={1}
@@ -256,7 +304,6 @@
     <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
       <div class="active-toolbar">
         <FullscreenButton />
-        <WakeLockButton bind:enabled={wakeLockEnabled} timerActive={isActive} />
         <VolumeControl />
       </div>
       {#if !isPaused}
@@ -324,6 +371,12 @@
     color: #fff;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (min-width: 768px) {
+    .app {
+      max-width: 640px;
+    }
   }
 
   .app {

@@ -740,9 +740,27 @@ describe("default volume", () => {
     localStorage.clear();
   });
 
-  it("default volume is 60% of MAX_VOLUME", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("default volume is 60% of MAX_VOLUME on mobile (no hover)", () => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })));
     initVolume();
     expect(getMasterVolume()).toBe(MAX_VOLUME * 0.60);
+  });
+
+  it("default volume is 40% of MAX_VOLUME on desktop (hover capable)", () => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+    initVolume();
+    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.40);
+  });
+
+  it("stored volume overrides desktop default", () => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+    localStorage.setItem("timer-volume", "20");
+    initVolume();
+    expect(getMasterVolume()).toBe(20);
   });
 
   it("default volume is not zero", () => {
@@ -767,10 +785,9 @@ describe("master volume", () => {
     expect(getMasterVolume()).toBe(1.0);
   });
 
-  it("default volume is 75% of MAX_VOLUME and not zero", () => {
+  it("default volume is not zero and respects device type", () => {
     localStorage.clear();
     initVolume(); // no localStorage value — should use the built-in default
-    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.60);
     expect(getMasterVolume()).toBeGreaterThan(0);
   });
 
