@@ -25,6 +25,19 @@ Volume is controlled by `_masterVolume`, a multiplier applied to every tone:
 
 Desktop detection uses `window.matchMedia("(hover: hover)")` — hover-capable devices get a lower default since desktop speakers are typically louder than phone speakers.
 
+### Volume Slider (Quadratic Curve)
+
+The volume slider in `VolumeControl.svelte` uses a quadratic mapping so most of the slider's physical range covers the quiet end:
+
+- `volume = (sliderPosition / SLIDER_MAX)² × MAX_VOLUME`
+- At 25% slider → 6% of max volume
+- At 50% slider → 25% of max volume
+- At 75% slider → 56% of max volume
+
+This gives fine-grained control at low volumes (important for desktop speakers) while still allowing the full 3200% boost at the far end (needed for phone speakers in a noisy gym).
+
+The icon changes based on slider position: muted (0%), low (0–33%), high (33–66%), boost with `+` indicator (66–100%).
+
 ### Volume Boost & Compression
 
 When `_masterVolume > 1.0`, tones are routed through a shared `DynamicsCompressorNode` to boost loudness without clipping:

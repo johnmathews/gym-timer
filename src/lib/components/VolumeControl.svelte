@@ -2,14 +2,24 @@
   import { onMount } from "svelte";
   import { getMasterVolume, setMasterVolume, initVolume, MAX_VOLUME } from "$lib/timer";
 
-  const maxSlider = MAX_VOLUME * 100;
-  let volume = $state(100);
+  const SLIDER_MAX = 1000;
+  let sliderValue = $state(0);
   let open = $state(false);
   let containerEl: HTMLDivElement | undefined = $state();
 
+  /** Quadratic curve: most of the slider covers the quiet range. */
+  function sliderToVolume(s: number): number {
+    const t = s / SLIDER_MAX; // 0 to 1
+    return t * t * MAX_VOLUME;
+  }
+
+  function volumeToSlider(v: number): number {
+    return Math.round(Math.sqrt(v / MAX_VOLUME) * SLIDER_MAX);
+  }
+
   onMount(() => {
     initVolume();
-    volume = Math.round(getMasterVolume() * 100);
+    sliderValue = volumeToSlider(getMasterVolume());
 
     function handleClickOutside(e: MouseEvent) {
       if (open && containerEl && !containerEl.contains(e.target as Node)) {
@@ -25,12 +35,12 @@
   }
 
   function handleInput(e: Event) {
-    volume = Number((e.target as HTMLInputElement).value);
-    setMasterVolume(volume / 100);
+    sliderValue = Number((e.target as HTMLInputElement).value);
+    setMasterVolume(sliderToVolume(sliderValue));
   }
 
   const iconLevel = $derived(
-    volume === 0 ? "muted" : volume <= 50 ? "low" : volume <= 100 ? "high" : "boost"
+    sliderValue === 0 ? "muted" : sliderValue <= SLIDER_MAX / 3 ? "low" : sliderValue <= SLIDER_MAX * 2 / 3 ? "high" : "boost"
   );
 </script>
 
@@ -58,8 +68,8 @@
       <input
         type="range"
         min="0"
-        max={maxSlider}
-        value={volume}
+        max={SLIDER_MAX}
+        value={sliderValue}
         oninput={handleInput}
         class="volume-slider"
         aria-label="Volume level"

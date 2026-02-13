@@ -519,10 +519,10 @@ test.describe('Timer', () => {
   test('volume slider adjusts value', async ({ page }) => {
     await page.getByLabel('Volume').click();
     const slider = page.getByLabel('Volume level');
-    await slider.fill('1600');
-    // Verify localStorage was updated (slider max=3200, so 1600 maps to 16.0)
+    await slider.fill('500');
+    // Quadratic mapping: (500/1000)^2 * 32 = 8.0
     const stored = await page.evaluate(() => localStorage.getItem('timer-volume'));
-    expect(stored).toBe('16');
+    expect(stored).toBe('8');
   });
 
   test('volume and fullscreen icons visible during active timer', async ({ page }) => {
