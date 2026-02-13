@@ -238,6 +238,92 @@ export function createTimer() {
     }
   }
 
+  function getElapsedMs(): number {
+    if (getStore(status) === "running") {
+      return Date.now() - _startTime;
+    }
+    return _pausedElapsed;
+  }
+
+  function segmentIndexAt(elapsedSec: number): number {
+    for (let i = 0; i < _timeline.length; i++) {
+      const seg = _timeline[i];
+      if (elapsedSec < seg.startOffset + seg.duration) {
+        return i;
+      }
+    }
+    return _timeline.length;
+  }
+
+  function seekTo(elapsedMs: number): void {
+    const currentStatus = getStore(status);
+    if (currentStatus !== "running" && currentStatus !== "paused") return;
+
+    const elapsedSec = Math.floor(elapsedMs / 1000);
+    const lastSeg = _timeline[_timeline.length - 1];
+    const totalDur = lastSeg.startOffset + lastSeg.duration;
+
+    if (elapsedSec >= totalDur) {
+      clearTick();
+      remaining.set(0);
+      status.set("finished");
+      return;
+    }
+
+    if (currentStatus === "running") {
+      _startTime = Date.now() - elapsedMs;
+    } else {
+      _pausedElapsed = elapsedMs;
+    }
+
+    const idx = segmentIndexAt(elapsedSec);
+    const seg = _timeline[idx];
+    remaining.set(seg.startOffset + seg.duration - elapsedSec);
+    phase.set(seg.phase);
+    currentRep.set(seg.rep);
+  }
+
+  function skipForward(): void {
+    const currentStatus = getStore(status);
+    if (currentStatus !== "running" && currentStatus !== "paused") return;
+    if (_timeline.length === 0) return;
+
+    const elapsedSec = Math.floor(getElapsedMs() / 1000);
+    const idx = segmentIndexAt(elapsedSec);
+
+    if (idx >= _timeline.length - 1) {
+      const lastSeg = _timeline[_timeline.length - 1];
+      seekTo((lastSeg.startOffset + lastSeg.duration) * 1000);
+    } else {
+      seekTo(_timeline[idx + 1].startOffset * 1000);
+    }
+  }
+
+  function skipBackward(): void {
+    const currentStatus = getStore(status);
+    if (currentStatus !== "running" && currentStatus !== "paused") return;
+    if (_timeline.length === 0) return;
+
+    const elapsedSec = Math.floor(getElapsedMs() / 1000);
+    const idx = segmentIndexAt(elapsedSec);
+
+    if (idx >= _timeline.length) {
+      seekTo(_timeline[_timeline.length - 1].startOffset * 1000);
+      return;
+    }
+
+    const seg = _timeline[idx];
+    const timeInSeg = elapsedSec - seg.startOffset;
+
+    if (timeInSeg > 2) {
+      seekTo(seg.startOffset * 1000);
+    } else if (idx > 0) {
+      seekTo(_timeline[idx - 1].startOffset * 1000);
+    } else {
+      seekTo(0);
+    }
+  }
+
   return {
     duration: { subscribe: duration.subscribe } as Readable<number>,
     remaining: { subscribe: remaining.subscribe } as Readable<number>,
@@ -252,6 +338,8 @@ export function createTimer() {
     pause,
     reset,
     destroy,
+    skipForward,
+    skipBackward,
   };
 }
 

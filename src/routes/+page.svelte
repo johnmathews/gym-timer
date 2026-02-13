@@ -138,17 +138,41 @@
  const isWork = $derived(isRunning && $phase === "work");
  const isRest = $derived(isRunning && $phase === "rest");
 
- function handleScreenTap(e: MouseEvent) {
-  // Don't handle taps on buttons or toolbar controls
+ let swipeStartX = 0;
+ let swipeStartY = 0;
+ let swipePointerId = -1;
+
+ function handlePointerDown(e: PointerEvent) {
   if ((e.target as HTMLElement).closest("button")) return;
   if ((e.target as HTMLElement).closest(".active-toolbar")) return;
-  resumeAudioContext();
-  if ($status === "running") {
-   log("ui:pause");
-   timer.pause();
-  } else if ($status === "paused") {
-   log("ui:resume");
-   timer.start();
+  swipeStartX = e.clientX;
+  swipeStartY = e.clientY;
+  swipePointerId = e.pointerId;
+ }
+
+ function handlePointerUp(e: PointerEvent) {
+  if (e.pointerId !== swipePointerId) return;
+  swipePointerId = -1;
+
+  const deltaX = e.clientX - swipeStartX;
+  const deltaY = e.clientY - swipeStartY;
+
+  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+   resumeAudioContext();
+   if (deltaX > 0) {
+    timer.skipForward();
+   } else {
+    timer.skipBackward();
+   }
+  } else {
+   resumeAudioContext();
+   if ($status === "running") {
+    log("ui:pause");
+    timer.pause();
+   } else if ($status === "paused") {
+    log("ui:resume");
+    timer.start();
+   }
   }
  }
 
@@ -291,7 +315,7 @@
  {:else}
   <!-- Running / Paused / Finished -->
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-  <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
+  <div class="active-screen" data-testid="active-screen" onpointerdown={handlePointerDown} onpointerup={handlePointerUp}>
    <div class="active-toolbar">
     <FullscreenButton />
     <VolumeControl />
@@ -301,7 +325,17 @@
    {/if}
 
    <div class="countdown-area">
+    {#if !isFinished}
+     <button class="skip-btn skip-back" onclick={() => { resumeAudioContext(); timer.skipBackward(); }} aria-label="Previous segment">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/></svg>
+     </button>
+    {/if}
     <CountdownDisplay remaining={$remaining} />
+    {#if !isFinished}
+     <button class="skip-btn skip-fwd" onclick={() => { resumeAudioContext(); timer.skipForward(); }} aria-label="Next segment">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" fill="currentColor"/></svg>
+     </button>
+    {/if}
    </div>
 
    <div class="controls">
@@ -468,6 +502,54 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
+  position: relative;
+  width: 100%;
+ }
+
+ .skip-btn {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px;
+  color: rgba(0, 0, 0, 0.4);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 0;
+ }
+
+ .skip-btn svg {
+  width: 36px;
+  height: 36px;
+ }
+
+ .skip-back {
+  left: 16px;
+ }
+
+ .skip-fwd {
+  right: 16px;
+ }
+
+ @media (hover: hover) {
+  .skip-btn {
+   display: block;
+  }
+
+  .skip-btn:hover {
+   color: rgba(0, 0, 0, 0.7);
+  }
+
+  .app.paused .skip-btn:hover {
+   color: rgba(255, 255, 255, 0.7);
+  }
+ }
+
+ .app.paused .skip-btn {
+  color: rgba(255, 255, 255, 0.4);
  }
 
  .controls {

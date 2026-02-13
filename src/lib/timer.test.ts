@@ -735,6 +735,343 @@ describe("pause/resume wall-clock correctness", () => {
   });
 });
 
+describe("skipForward and skipBackward", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Timeline for configure(5, 3, 2):
+  //   getReady: offset 0, duration 5
+  //   work1:    offset 5, duration 5
+  //   rest1:    offset 10, duration 3
+  //   work2:    offset 13, duration 5
+  //   Total: 18s
+
+  it("skipForward from getReady jumps to work", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime(2000); // 2s into getReady
+    expect(get(timer.phase)).toBe("getReady");
+
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipForward from work jumps to rest", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000); // 2s into work1
+    expect(get(timer.phase)).toBe("work");
+
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(3);
+
+    timer.destroy();
+  });
+
+  it("skipForward from rest jumps to next work", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 1) * 1000); // 1s into rest
+    expect(get(timer.phase)).toBe("rest");
+
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipForward on last segment finishes the timer", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to work2 (last segment)
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 2) * 1000); // 2s into work2
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    timer.skipForward();
+    expect(get(timer.status)).toBe("finished");
+    expect(get(timer.remaining)).toBe(0);
+
+    timer.destroy();
+  });
+
+  it("skipForward while paused updates position", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime(2000); // 2s into getReady
+    timer.pause();
+    expect(get(timer.status)).toBe("paused");
+
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.status)).toBe("paused");
+
+    timer.destroy();
+  });
+
+  it("skipForward while idle is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+
+    timer.skipForward();
+    expect(get(timer.status)).toBe("idle");
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipForward while finished is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 1);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 5) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.skipForward();
+    expect(get(timer.status)).toBe("finished");
+    expect(get(timer.remaining)).toBe(0);
+
+    timer.destroy();
+  });
+
+  it("skipBackward >2s into segment restarts current segment", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000); // 3s into work1
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(2);
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipBackward <=2s into segment goes to previous segment", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 1) * 1000); // 1s into rest
+    expect(get(timer.phase)).toBe("rest");
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipBackward at exactly 2s into segment goes to previous segment", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000); // exactly 2s into work1
+    expect(get(timer.phase)).toBe("work");
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("skipBackward on first segment restarts it", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime(1000); // 1s into getReady (<=2s, first segment)
+    expect(get(timer.phase)).toBe("getReady");
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("skipBackward >2s into first segment restarts it", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime(3000); // 3s into getReady (>2s, first segment)
+    expect(get(timer.phase)).toBe("getReady");
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("skipBackward while paused updates position", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000); // 3s into work1
+    timer.pause();
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.status)).toBe("paused");
+
+    timer.destroy();
+  });
+
+  it("skipBackward while idle is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+
+    timer.skipBackward();
+    expect(get(timer.status)).toBe("idle");
+
+    timer.destroy();
+  });
+
+  it("skipBackward while finished is a no-op", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 1);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 5) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.skipBackward();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("multiple skipForward calls advance through all segments", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // getReady → work1
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+
+    // work1 → rest1
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(1);
+
+    // rest1 → work2
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // work2 → finished
+    timer.skipForward();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("skip while paused then resume continues from skipped position", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    vi.advanceTimersByTime(2000); // 2s into getReady
+    timer.pause();
+
+    timer.skipForward(); // jump to work1
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.status)).toBe("paused");
+
+    timer.start(); // resume
+    vi.advanceTimersByTime(3000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(2);
+
+    timer.destroy();
+  });
+
+  it("skipForward with rest=0 skips between work segments", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 3);
+    timer.start();
+
+    // getReady → work1
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+
+    // work1 → work2
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // work2 → work3
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    // work3 → finished
+    timer.skipForward();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("skipBackward from work2 <=2s goes back to rest1", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 1s into work2
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 1) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(3);
+
+    timer.destroy();
+  });
+});
+
 describe("default volume", () => {
   beforeEach(() => {
     localStorage.clear();

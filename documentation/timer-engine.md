@@ -77,6 +77,31 @@ A `visibilitychange` listener triggers `syncState()` immediately when the page b
 | `pause()`           | Pause a running timer                            |
 | `reset()`           | Stop and return to idle                          |
 | `destroy()`         | Clean up interval and event listeners            |
+| `skipForward()`     | Jump to start of next segment (or finish if last)|
+| `skipBackward()`    | Restart current segment (>2s in) or go to previous|
+
+## Skip/Rewind
+
+`skipForward()` and `skipBackward()` allow jumping between timeline segments while the timer is running or paused. They work by computing the current segment from elapsed time and using `seekTo()` to reposition.
+
+### Internal Helpers
+
+- **`getElapsedMs()`**: Returns elapsed ms — `Date.now() - _startTime` when running, `_pausedElapsed` when paused
+- **`segmentIndexAt(elapsedSec)`**: Binary search through timeline to find which segment contains a given elapsed time
+- **`seekTo(elapsedMs)`**: Repositions the timer to a target elapsed time. Adjusts `_startTime` (running) or `_pausedElapsed` (paused) and directly updates stores (remaining, phase, currentRep). If the target is past all segments, finishes the timer.
+
+### skipForward
+
+1. Find current segment index from elapsed time
+2. If on last segment → finish the timer
+3. Otherwise → seek to `startOffset` of next segment
+
+### skipBackward
+
+1. Find current segment index and time spent in it
+2. If >2s into segment → restart it (seek to its `startOffset`)
+3. If <=2s and not first segment → seek to previous segment's `startOffset`
+4. If first segment → restart it (seek to 0)
 
 ## Constants
 

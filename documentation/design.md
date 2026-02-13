@@ -52,6 +52,28 @@ Desktop breakpoint: `@media (min-width: 768px)` is used for:
 - Detected via `navigator.standalone` (iOS) or `display-mode: standalone` media query
 - Safe area insets respected via `env(safe-area-inset-bottom)` for notched devices
 
+## Skip/Rewind Controls
+
+During an active timer (running or paused, not finished), users can skip to the next or previous segment:
+
+### Mobile — Swipe Gestures
+
+Horizontal swipe on the active screen:
+- **Swipe right** (left-to-right, deltaX > 50px): Skip forward to next segment
+- **Swipe left** (right-to-left, deltaX > 50px): Skip backward (restart current or go to previous)
+- Vertical swipes and short movements fall through to tap behavior (pause/resume)
+
+Implemented via `onpointerdown`/`onpointerup` handlers that track start position and compute delta on release.
+
+### Desktop — Arrow Buttons
+
+`<` and `>` arrow buttons positioned on left/right edges of the countdown area:
+- Only visible on hover-capable devices: `@media (hover: hover)`
+- Semi-transparent (`rgba(0,0,0,0.4)`) with hover brightening
+- Adapts to paused state (white on black background)
+- Hidden during finished state
+- Uses Material Design chevron SVG icons
+
 ## Config Cards
 
 Idle screen shows three config cards (Work, Rest, Repeats) that open full-screen ruler pickers when tapped. Each card displays:
