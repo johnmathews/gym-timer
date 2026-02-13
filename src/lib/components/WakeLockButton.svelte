@@ -1,7 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
 
-  let enabled = $state(false);
+  let {
+    enabled = $bindable(true),
+    timerActive = false,
+  }: {
+    enabled: boolean;
+    timerActive: boolean;
+  } = $props();
+
   let canWakeLock = $state(false);
   let wakeLock: WakeLockSentinel | null = null;
 
@@ -16,21 +23,28 @@
         wakeLock = null;
       });
     } catch {
-      enabled = false;
+      // Wake lock request failed (e.g. page not visible)
     }
   }
 
-  async function toggle() {
-    enabled = !enabled;
-    if (enabled) {
-      await acquire();
-    } else if (wakeLock) {
+  async function release() {
+    if (wakeLock) {
       await wakeLock.release();
+      wakeLock = null;
     }
   }
+
+  // Acquire/release the actual lock based on both user preference and timer state
+  $effect(() => {
+    if (enabled && timerActive && canWakeLock) {
+      acquire();
+    } else {
+      release();
+    }
+  });
 
   function handleVisibility() {
-    if (document.visibilityState === "visible" && enabled && !wakeLock) {
+    if (document.visibilityState === "visible" && enabled && timerActive && !wakeLock) {
       acquire();
     }
   }
@@ -41,11 +55,12 @@
   });
 
   onDestroy(() => {
-    if (wakeLock) {
-      wakeLock.release();
-      wakeLock = null;
-    }
+    release();
   });
+
+  function toggle() {
+    enabled = !enabled;
+  }
 </script>
 
 {#if canWakeLock}

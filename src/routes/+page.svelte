@@ -23,6 +23,7 @@
 
   let activePicker: "work" | "rest" | "repeat" | null = $state(null);
   let pickerOriginalValue = $state(0);
+  let wakeLockEnabled = $state(true);
 
   onMount(() => {
     initVolume();
@@ -205,7 +206,7 @@
 
     <div class="toolbar">
       <FullscreenButton />
-      <WakeLockButton />
+      <WakeLockButton bind:enabled={wakeLockEnabled} timerActive={isActive} />
       <VolumeControl />
     </div>
 
@@ -260,7 +261,7 @@
     <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
       <div class="active-toolbar">
         <FullscreenButton />
-        <WakeLockButton />
+        <WakeLockButton bind:enabled={wakeLockEnabled} timerActive={isActive} />
         <VolumeControl />
       </div>
       {#if !isPaused}

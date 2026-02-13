@@ -534,6 +534,223 @@ describe("edge cases", () => {
   });
 });
 
+describe("pause/resume wall-clock correctness", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("remaining does not drift during a long pause", () => {
+    const timer = createTimer();
+    timer.configure(30, 0, 1);
+    timer.start();
+
+    // Skip getReady + run 13s into work → remaining = 17
+    vi.advanceTimersByTime((GET_READY_DURATION + 13) * 1000);
+    expect(get(timer.remaining)).toBe(17);
+
+    timer.pause();
+    expect(get(timer.status)).toBe("paused");
+
+    // Simulate 10 seconds of real time passing while paused
+    vi.advanceTimersByTime(10000);
+    expect(get(timer.remaining)).toBe(17); // must NOT be 7
+
+    // Simulate 60 seconds of real time passing while paused
+    vi.advanceTimersByTime(60000);
+    expect(get(timer.remaining)).toBe(17); // must NOT drift
+
+    timer.destroy();
+  });
+
+  it("resume continues from exact pause point", () => {
+    const timer = createTimer();
+    timer.configure(30, 0, 1);
+    timer.start();
+
+    // Skip getReady + run 13s into work → remaining = 17
+    vi.advanceTimersByTime((GET_READY_DURATION + 13) * 1000);
+    expect(get(timer.remaining)).toBe(17);
+
+    timer.pause();
+    vi.advanceTimersByTime(10000); // 10 seconds pass while paused
+
+    timer.start(); // resume
+    expect(get(timer.status)).toBe("running");
+
+    // After 1 second of resumed running, remaining should be 16
+    vi.advanceTimersByTime(1000);
+    expect(get(timer.remaining)).toBe(16);
+
+    // After 5 more seconds, remaining should be 11
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(11);
+
+    timer.destroy();
+  });
+
+  it("multiple pause/resume cycles preserve correct remaining", () => {
+    const timer = createTimer();
+    timer.configure(30, 10, 2);
+    timer.start();
+
+    // Skip getReady
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(30);
+
+    // Run 10s, pause, wait 20s, resume, run 5s
+    vi.advanceTimersByTime(10000);
+    expect(get(timer.remaining)).toBe(20);
+
+    timer.pause();
+    vi.advanceTimersByTime(20000);
+    expect(get(timer.remaining)).toBe(20); // unchanged
+
+    timer.start();
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(15);
+
+    // Pause again, wait 30s, resume, run 5s
+    timer.pause();
+    vi.advanceTimersByTime(30000);
+    expect(get(timer.remaining)).toBe(15); // unchanged
+
+    timer.start();
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(10);
+
+    timer.destroy();
+  });
+
+  it("pause during rest phase preserves remaining across resume", () => {
+    const timer = createTimer();
+    timer.configure(5, 10, 2);
+    timer.start();
+
+    // Skip getReady + finish work → enter rest
+    vi.advanceTimersByTime((GET_READY_DURATION + 5) * 1000);
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.remaining)).toBe(10);
+
+    // Run 3s into rest, pause for 15s, resume
+    vi.advanceTimersByTime(3000);
+    expect(get(timer.remaining)).toBe(7);
+
+    timer.pause();
+    vi.advanceTimersByTime(15000);
+    expect(get(timer.remaining)).toBe(7); // unchanged during pause
+
+    timer.start();
+    vi.advanceTimersByTime(2000);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("pause during getReady preserves remaining across resume", () => {
+    const timer = createTimer();
+    timer.configure(30, 0, 1);
+    timer.start();
+
+    // Run 2s into getReady
+    vi.advanceTimersByTime(2000);
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(3);
+
+    timer.pause();
+    vi.advanceTimersByTime(30000);
+    expect(get(timer.remaining)).toBe(3); // unchanged
+
+    timer.start();
+    vi.advanceTimersByTime(3000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.remaining)).toBe(30);
+
+    timer.destroy();
+  });
+
+  it("phase transitions are correct after long pause mid-work", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Skip getReady + run 3s into work rep 1
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(2);
+
+    // Pause for a long time
+    timer.pause();
+    vi.advanceTimersByTime(120000); // 2 minutes
+
+    // Resume and verify the timer picks up where it left off
+    timer.start();
+    vi.advanceTimersByTime(2000); // finish work rep 1
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.remaining)).toBe(3);
+
+    vi.advanceTimersByTime(3000); // finish rest
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+    expect(get(timer.remaining)).toBe(5);
+
+    vi.advanceTimersByTime(5000); // finish work rep 2
+    expect(get(timer.status)).toBe("finished");
+    expect(get(timer.remaining)).toBe(0);
+
+    timer.destroy();
+  });
+
+  it("syncState ignores stale ticks fired after pause", () => {
+    // Simulates iOS Safari batching interval callbacks: after clearInterval,
+    // already-queued callbacks may still fire from the event loop.
+    const timer = createTimer();
+    timer.configure(30, 0, 1);
+    timer.start();
+
+    // Skip getReady + run 13s into work → remaining = 17
+    vi.advanceTimersByTime((GET_READY_DURATION + 13) * 1000);
+    expect(get(timer.remaining)).toBe(17);
+
+    // Pause — this clears the interval
+    timer.pause();
+    expect(get(timer.remaining)).toBe(17);
+
+    // Manually advance time and fire a tick (simulating a stale callback)
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.remaining)).toBe(17); // must stay at 17
+
+    // Resume after 10 seconds total pause
+    vi.advanceTimersByTime(5000);
+    timer.start();
+    vi.advanceTimersByTime(1000);
+    expect(get(timer.remaining)).toBe(16);
+
+    timer.destroy();
+  });
+});
+
+describe("default volume", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("default volume is 60% of MAX_VOLUME", () => {
+    initVolume();
+    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.60);
+  });
+
+  it("default volume is not zero", () => {
+    initVolume();
+    expect(getMasterVolume()).toBeGreaterThan(0);
+  });
+});
+
 describe("GET_READY_DURATION constant", () => {
   it("is exported and equals 5", () => {
     expect(GET_READY_DURATION).toBe(5);
@@ -553,7 +770,7 @@ describe("master volume", () => {
   it("default volume is 75% of MAX_VOLUME and not zero", () => {
     localStorage.clear();
     initVolume(); // no localStorage value — should use the built-in default
-    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.75);
+    expect(getMasterVolume()).toBe(MAX_VOLUME * 0.60);
     expect(getMasterVolume()).toBeGreaterThan(0);
   });
 

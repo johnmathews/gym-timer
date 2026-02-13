@@ -8,7 +8,7 @@ export const GET_READY_DURATION = 5;
 
 const VOLUME_STORAGE_KEY = "timer-volume";
 export const MAX_VOLUME = 32.0;
-let _masterVolume = MAX_VOLUME * 0.75;
+let _masterVolume = MAX_VOLUME * 0.60;
 
 export function getMasterVolume(): number {
   return _masterVolume;
@@ -23,7 +23,7 @@ export function setMasterVolume(v: number): void {
   }
 }
 
-const DEFAULT_VOLUME = MAX_VOLUME * 0.75;
+const DEFAULT_VOLUME = MAX_VOLUME * 0.60;
 
 export function initVolume(): void {
   _masterVolume = DEFAULT_VOLUME;
@@ -108,6 +108,11 @@ export function createTimer() {
 
   /** Recalculate timer state from wall-clock elapsed time. */
   function syncState() {
+    // Guard: ignore stale tick callbacks that fire after clearInterval
+    // (iOS Safari batches timer events and flushes them from the event
+    // queue even after the interval is cleared).
+    if (getStore(status) !== "running") return;
+
     const elapsed = Math.floor((Date.now() - _startTime) / 1000);
 
     for (const seg of _timeline) {
