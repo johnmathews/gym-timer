@@ -567,24 +567,25 @@ test.describe("Timer", () => {
     await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
   });
 
-  test("selecting Emom  preset populates sliders", async ({ page }) => {
+  test("selecting EMOM preset populates sliders", async ({ page }) => {
     await page.getByTestId("presets-button").click();
     await page.getByTestId("preset-emom").click();
-    await expect(page.getByTestId("config-card-work")).toContainText("2:00");
-    await expect(page.getByTestId("config-card-rest")).toContainText("1:00");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x3");
+    await expect(page.getByTestId("preset-list")).not.toBeVisible();
+    await expect(page.getByTestId("config-card-work")).toContainText("0:40");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:20");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
   });
 
   test("total time updates after preset selection", async ({ page }) => {
     await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-tabata").click();
-    // Tabata: 20s work * 8 + 10s rest * 7 = 160 + 70 = 230s = 3:50
-    await expect(page.getByTestId("total-time")).toHaveText("3:50");
+    await page.getByTestId("preset-emom").click();
+    // EMOM: 40s work * 10 + 20s rest * 9 = 400 + 180 = 580s = 9:40
+    await expect(page.getByTestId("total-time")).toHaveText("9:40");
   });
 
   test("can start timer after preset selection", async ({ page }) => {
     await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-tabata").click();
+    await page.getByTestId("preset-emom").click();
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
     await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
