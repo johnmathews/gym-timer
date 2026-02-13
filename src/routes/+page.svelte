@@ -151,6 +151,7 @@
   swipeStartX = e.clientX;
   swipeStartY = e.clientY;
   swipePointerId = e.pointerId;
+  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
  }
 
  function handlePointerUp(e: PointerEvent) {
@@ -496,6 +497,7 @@
   width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  touch-action: none;
   height: 100dvh;
   overflow: hidden;
  }

@@ -592,4 +592,137 @@ test.describe("Timer", () => {
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
     await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
   });
+
+  // --- Swipe gestures ---
+
+  test("active-screen has touch-action: none to prevent browser gesture interference", async ({
+    page,
+  }) => {
+    await page.getByTestId("play-button").click();
+    const screen = page.getByTestId("active-screen");
+    const touchAction = await screen.evaluate(
+      (el) => getComputedStyle(el).touchAction,
+    );
+    expect(touchAction).toBe("none");
+  });
+
+  test("swipe right skips forward from getReady to work", async ({ page }) => {
+    // Need multi-rep so phase header shows
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-2").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    // Swipe right (deltaX > 50)
+    const screen = page.getByTestId("active-screen");
+    const box = await screen.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx - 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    // Should have skipped forward to work phase, not paused
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("swipe left skips backward from work to getReady", async ({ page }) => {
+    // Need multi-rep so phase header shows
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-2").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+
+    // Advance past getReady (5s) into work, then 1 more second
+    await page.clock.fastForward(6000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    // Swipe left (deltaX < -50) — within 2s of segment start, goes to previous
+    const screen = page.getByTestId("active-screen");
+    const box = await screen.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx + 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx - 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    // Should have skipped backward to getReady
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("small horizontal movement is a tap (pauses), not a swipe", async ({
+    page,
+  }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    // Move < 50px horizontally — should be treated as a tap
+    const screen = page.getByTestId("active-screen");
+    const box = await screen.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 20, cy, { steps: 3 });
+    await page.mouse.up();
+
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+  });
+
+  test("swipe while paused skips without resuming", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
+
+    // Tap to pause
+    await page.getByTestId("active-screen").click();
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    // Record countdown before skip (paused during getReady)
+    const timeBefore = await page.getByTestId("countdown-time").textContent();
+
+    // Swipe right to skip forward
+    const screen = page.getByTestId("active-screen");
+    const box = await screen.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx - 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    // Should still be paused (swipe doesn't resume)
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    // Countdown should have changed (skipped to work phase = 00:30)
+    const timeAfter = await page.getByTestId("countdown-time").textContent();
+    expect(timeAfter).not.toBe(timeBefore);
+  });
+
+  test("vertical swipe does not trigger skip", async ({ page }) => {
+    // Need multi-rep so phase header shows
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-2").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    // Swipe diagonally with more vertical than horizontal movement
+    // abs(deltaX) > 50 but abs(deltaY) > abs(deltaX) → should NOT skip
+    const screen = page.getByTestId("active-screen");
+    const box = await screen.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 60, cy - 80, { steps: 5 });
+    await page.mouse.up();
+
+    // Should have paused (tap behavior), NOT skipped to work
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+  });
 });

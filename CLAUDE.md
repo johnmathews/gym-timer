@@ -22,7 +22,7 @@
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 87 unit tests
 - `src/lib/presets.test.ts` — 6 preset validation tests
-- `tests/timer.test.ts` — 46 e2e tests (Playwright)
+- `tests/timer.test.ts` — 52 e2e tests (Playwright)
 - `documentation/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases

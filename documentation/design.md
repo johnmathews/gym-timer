@@ -63,7 +63,9 @@ Horizontal swipe on the active screen:
 - **Swipe left** (right-to-left, deltaX > 50px): Skip backward (restart current or go to previous)
 - Vertical swipes and short movements fall through to tap behavior (pause/resume)
 
-Implemented via `onpointerdown`/`onpointerup` handlers that track start position and compute delta on release.
+Implemented via `onpointerdown`/`onpointerup` handlers that track start position and compute delta on release. Critical CSS/JS for reliable mobile swipes:
+- `touch-action: none` on `.active-screen` prevents the browser from intercepting swipes (e.g. Safari back/forward navigation)
+- `setPointerCapture()` on pointer down ensures `pointerup` fires even if the finger drifts outside the element
 
 ### Desktop — Arrow Buttons
 
