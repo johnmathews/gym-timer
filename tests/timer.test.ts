@@ -6,6 +6,17 @@ test.describe('Timer', () => {
     await page.goto('/');
   });
 
+  test('JS hydration works (canary)', async ({ page }) => {
+    // Guard: if JS fails to load (e.g. stale preview server serving old
+    // hashes), SSR-only tests still pass but interactive tests all break.
+    // This test catches that failure fast by verifying a click changes state.
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.getByTestId('config-card-work').click();
+    await expect(page.getByTestId('ruler-picker')).toBeVisible();
+    expect(errors).toHaveLength(0);
+  });
+
   test('shows three config cards on landing', async ({ page }) => {
     await expect(page.getByTestId('config-card-work')).toBeVisible();
     await expect(page.getByTestId('config-card-rest')).toBeVisible();
