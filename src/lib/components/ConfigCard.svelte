@@ -32,7 +32,7 @@
     height: 70px;
     padding: 0 20px;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     cursor: pointer;
     touch-action: manipulation;
     transition: opacity 0.15s ease, transform 0.1s ease;
@@ -48,7 +48,7 @@
   }
 
   .label {
-    font-size: 1.25rem;
+    font-size: 1.6rem;
     font-weight: 500;
     color: #000;
   }
