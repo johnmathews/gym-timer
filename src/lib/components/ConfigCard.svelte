@@ -23,7 +23,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 70px;
+  height: 85px;
   padding: 0 20px;
   border: none;
   border-radius: 6px;
@@ -44,18 +44,20 @@
  }
 
  .label {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 400;
   letter-spacing: 1px;
   color: #000;
+  margin-bottom: -5px;
  }
 
  .value {
-  font-size: 2.5rem;
+  font-size: 3.5rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   font-family: "Bebas Neue", sans-serif;
   letter-spacing: 1px;
   color: #000;
+  margin-bottom: -5px;
  }
 </style>
