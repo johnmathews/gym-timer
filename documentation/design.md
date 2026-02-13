@@ -27,7 +27,7 @@ The full-screen background color provides an unmistakable visual signal of the c
 
 ## Typography
 
-- Countdown display uses a large monospace-friendly font stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace`
+- Time displays (countdown, total time, config card values) use `"Bebas Neue", sans-serif` — a tall, condensed, heavy font loaded from Google Fonts
 - `font-variant-numeric: tabular-nums` ensures digits don't shift as the countdown changes
 - Base countdown size: `min(30vw, 35vh)`
 - Desktop countdown size: `min(20vw, 40vh)` — larger since there's more empty space

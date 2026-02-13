@@ -54,7 +54,7 @@
   font-size: 2.5rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  font-family: "Bebas Neue", sans-serif;
   letter-spacing: 1px;
   color: #000;
  }

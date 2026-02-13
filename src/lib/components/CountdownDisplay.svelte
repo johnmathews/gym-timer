@@ -22,7 +22,7 @@
   }
 
   .time {
-    font-family: ui-rounded, "Nunito", sans-serif;
+    font-family: "Bebas Neue", sans-serif;
     font-size: min(30vw, 35vh);
     font-weight: 800;
     font-variant-numeric: tabular-nums;

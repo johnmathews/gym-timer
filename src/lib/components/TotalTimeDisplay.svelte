@@ -68,12 +68,13 @@
 
   .time {
     flex: 1;
+    font-family: "Bebas Neue", sans-serif;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: #fff;
     letter-spacing: -0.02em;
     line-height: 1;
     text-align: right;
-    font-size: min(25vw, 8rem);
+    font-size: min(35vw, 12rem);
   }
 </style>
