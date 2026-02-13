@@ -63,6 +63,14 @@ export function createTimer() {
   let _restDuration = 0;
   let _totalReps = 1;
 
+  // Wall-clock state: the timer calculates its position from elapsed real
+  // time rather than counting interval ticks, so it catches up correctly
+  // when the browser suspends setInterval (e.g. screen off on mobile).
+  let _timeline: { phase: TimerPhase; rep: number; duration: number; startOffset: number }[] = [];
+  let _startTime = 0;          // Date.now() when the timer effectively started
+  let _pausedElapsed = 0;      // ms elapsed when paused (restored on resume)
+  let _visibilityHandler: (() => void) | null = null;
+
   function clearTick() {
     if (intervalId !== null) {
       clearInterval(intervalId);
@@ -78,6 +86,46 @@ export function createTimer() {
     return value!;
   }
 
+  function buildTimeline(): typeof _timeline {
+    const segments: typeof _timeline = [];
+    let offset = 0;
+
+    segments.push({ phase: "getReady", rep: 1, duration: GET_READY_DURATION, startOffset: offset });
+    offset += GET_READY_DURATION;
+
+    for (let rep = 1; rep <= _totalReps; rep++) {
+      segments.push({ phase: "work", rep, duration: _workDuration, startOffset: offset });
+      offset += _workDuration;
+
+      if (rep < _totalReps && _restDuration > 0) {
+        segments.push({ phase: "rest", rep, duration: _restDuration, startOffset: offset });
+        offset += _restDuration;
+      }
+    }
+
+    return segments;
+  }
+
+  /** Recalculate timer state from wall-clock elapsed time. */
+  function syncState() {
+    const elapsed = Math.floor((Date.now() - _startTime) / 1000);
+
+    for (const seg of _timeline) {
+      const segEnd = seg.startOffset + seg.duration;
+      if (elapsed < segEnd) {
+        remaining.set(segEnd - elapsed);
+        phase.set(seg.phase);
+        currentRep.set(seg.rep);
+        return;
+      }
+    }
+
+    // Past all segments — finished
+    clearTick();
+    remaining.set(0);
+    status.set("finished");
+  }
+
   function configure(work: number, rest: number, reps: number) {
     log("configure", { work, rest, reps });
     _workDuration = work;
@@ -90,6 +138,9 @@ export function createTimer() {
     totalReps.set(_totalReps);
     status.set("idle");
     clearTick();
+    _timeline = [];
+    _startTime = 0;
+    _pausedElapsed = 0;
   }
 
   function setDuration(minutes: number, seconds: number) {
@@ -101,47 +152,7 @@ export function createTimer() {
   }
 
   function tick() {
-    remaining.update((r) => {
-      const next = r - 1;
-      if (next <= 0) {
-        const currentPhase = getStore(phase);
-        const rep = getStore(currentRep);
-
-        if (currentPhase === "getReady") {
-          // Get ready done, start first work phase
-          log("phase:getReady→work");
-          phase.set("work");
-          return _workDuration;
-        } else if (currentPhase === "work" && rep < _totalReps && _restDuration > 0) {
-          // Work done, start rest
-          log("phase:work→rest", { rep });
-          phase.set("rest");
-          return _restDuration;
-        } else if (
-          currentPhase === "work" &&
-          rep < _totalReps &&
-          _restDuration === 0
-        ) {
-          // Work done, skip rest, next rep
-          log("phase:skip-rest", { rep: rep + 1 });
-          currentRep.set(rep + 1);
-          return _workDuration;
-        } else if (currentPhase === "rest") {
-          // Rest done, next rep
-          log("phase:rest→work", { rep: rep + 1 });
-          currentRep.set(rep + 1);
-          phase.set("work");
-          return _workDuration;
-        } else {
-          // Final rep work done
-          log("finished");
-          clearTick();
-          status.set("finished");
-          return 0;
-        }
-      }
-      return next;
-    });
+    syncState();
   }
 
   function start() {
@@ -155,21 +166,36 @@ export function createTimer() {
     log("start", { status: currentStatus, remaining: currentRemaining });
 
     if (currentStatus === "idle") {
-      // Enter getReady phase before starting work
+      _timeline = buildTimeline();
+      _startTime = Date.now();
+      _pausedElapsed = 0;
       phase.set("getReady");
       remaining.set(GET_READY_DURATION);
+    } else if (currentStatus === "paused") {
+      // Restore the effective start time so elapsed picks up where it left off
+      _startTime = Date.now() - _pausedElapsed;
     }
 
     status.set("running");
     clearTick();
-
     intervalId = setInterval(tick, 1000);
+
+    // Catch up immediately when the page becomes visible after suspension
+    if (typeof document !== "undefined" && !_visibilityHandler) {
+      _visibilityHandler = () => {
+        if (document.visibilityState === "visible" && getStore(status) === "running") {
+          syncState();
+        }
+      };
+      document.addEventListener("visibilitychange", _visibilityHandler);
+    }
   }
 
   function pause() {
     const currentStatus = getStore(status);
     if (currentStatus !== "running") return;
 
+    _pausedElapsed = Date.now() - _startTime;
     log("pause", { remaining: getStore(remaining) });
     clearTick();
     status.set("paused");
@@ -182,11 +208,18 @@ export function createTimer() {
     phase.set("work");
     currentRep.set(1);
     status.set("idle");
+    _timeline = [];
+    _startTime = 0;
+    _pausedElapsed = 0;
   }
 
   function destroy() {
     log("destroy");
     clearTick();
+    if (typeof document !== "undefined" && _visibilityHandler) {
+      document.removeEventListener("visibilitychange", _visibilityHandler);
+      _visibilityHandler = null;
+    }
   }
 
   return {
@@ -208,6 +241,7 @@ export function createTimer() {
 
 let _audioCtx: AudioContext | null = null;
 let _audioSessionUnlocked = false;
+let _masterCompressor: DynamicsCompressorNode | null = null;
 
 // Minimal silent WAV (1 sample, 16-bit mono, 44.1kHz) used to upgrade
 // iOS Safari's audio session from "ambient" to "playback".
@@ -226,6 +260,7 @@ function getAudioContext(): AudioContext {
 export function resetAudioContext(): void {
   _audioCtx = null;
   _audioSessionUnlocked = false;
+  _masterCompressor = null;
 }
 
 /** Resume the shared AudioContext and upgrade the audio session — must be
@@ -281,17 +316,21 @@ function playTone(
   const gain = ctx.createGain();
   osc.connect(gain);
 
-  // Use a compressor when volume exceeds 1.0 to boost loudness
-  // without harsh digital clipping (useful on iOS over background music)
+  // Route through a shared compressor when volume exceeds 1.0 to boost
+  // loudness without clipping. A single compressor for all tones prevents
+  // distortion when multiple tones overlap (each per-tone compressor would
+  // independently pass a loud signal, and the sum would clip at the output).
   if (_masterVolume > 1.0) {
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -10;
-    compressor.knee.value = 10;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.1;
-    gain.connect(compressor);
-    compressor.connect(ctx.destination);
+    if (!_masterCompressor) {
+      _masterCompressor = ctx.createDynamicsCompressor();
+      _masterCompressor.threshold.value = -10;
+      _masterCompressor.knee.value = 10;
+      _masterCompressor.ratio.value = 4;
+      _masterCompressor.attack.value = 0.003;
+      _masterCompressor.release.value = 0.1;
+      _masterCompressor.connect(ctx.destination);
+    }
+    gain.connect(_masterCompressor);
   } else {
     gain.connect(ctx.destination);
   }

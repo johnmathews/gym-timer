@@ -79,6 +79,7 @@
   .volume-btn {
     background: none;
     border: none;
+    color: inherit;
     cursor: pointer;
     padding: 4px;
     touch-action: manipulation;

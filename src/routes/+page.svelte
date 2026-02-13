@@ -9,6 +9,7 @@
   import PhaseHeader from "$lib/components/PhaseHeader.svelte";
   import VolumeControl from "$lib/components/VolumeControl.svelte";
   import FullscreenButton from "$lib/components/FullscreenButton.svelte";
+  import WakeLockButton from "$lib/components/WakeLockButton.svelte";
 
   const timer = createTimer();
   const { remaining, status, phase, currentRep, totalReps } = timer;
@@ -204,6 +205,7 @@
 
     <div class="toolbar">
       <FullscreenButton />
+      <WakeLockButton />
       <VolumeControl />
     </div>
 
@@ -258,6 +260,7 @@
     <div class="active-screen" data-testid="active-screen" onclick={handleScreenTap}>
       <div class="active-toolbar">
         <FullscreenButton />
+        <WakeLockButton />
         <VolumeControl />
       </div>
       {#if !isPaused}
