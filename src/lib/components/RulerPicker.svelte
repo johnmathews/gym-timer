@@ -137,7 +137,7 @@
  }
 
  .header-label {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 400;
   letter-spacing: 1px;
   color: #000;
