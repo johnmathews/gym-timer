@@ -8,11 +8,11 @@ The app includes built-in workout presets that populate all three sliders (work,
 
 | Name | Work | Rest | Reps |
 |------|------|------|------|
-| EMOM | 0:40 | 0:20 | 10 |
+| EMOM | 1:00 | 0:00 | 10 |
 | 30/30 | 0:30 | 0:30 | 6 |
-| Endurance | 1:00 | 0:30 | 5 |
-| Long Sets | 2:00 | 1:00 | 3 |
-| Stretch | 0:30 | 0:05 | 6 |
+| Endurance | 1:30 | 0:30 | 5 |
+| 2-1-3 | 2:00 | 1:00 | 3 |
+| Stretch | 0:30 | 0:10 | 3 |
 
 All values are within slider ranges (work 5–600s, rest 0–300s, reps 1–10) and aligned to the 5-second step grid.
 

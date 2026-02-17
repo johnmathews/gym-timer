@@ -575,14 +575,14 @@ test.describe("Timer", () => {
       "Work 1:00",
     );
     await expect(page.getByTestId("config-card-rest")).toContainText("0:0");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x4");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
   });
 
   test("total time updates after preset selection", async ({ page }) => {
     await page.getByTestId("presets-button").click();
     await page.getByTestId("preset-emom").click();
-    // EMOM: 40s work * 10 + 20s rest * 9 = 400 + 180 = 580s = 9:40
-    await expect(page.getByTestId("total-time")).toHaveText("4:00");
+    // EMOM: 60s work * 10 + 0s rest * 9 = 600s = 10:00
+    await expect(page.getByTestId("total-time")).toHaveText("10:00");
   });
 
   test("can start timer after preset selection", async ({ page }) => {
