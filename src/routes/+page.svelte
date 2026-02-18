@@ -23,9 +23,9 @@
  const timer = createTimer();
  const { remaining, status, phase, currentRep, totalReps } = timer;
 
- let duration = $state(30);
- let rest = $state(10);
- let reps = $state(3);
+ let duration = $state(60);
+ let rest = $state(0);
+ let reps = $state(10);
  let prevStatus: string = "idle";
  let prevPhase: string = "work";
  let prevRep: number = 1;

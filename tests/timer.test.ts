@@ -24,9 +24,9 @@ test.describe("Timer", () => {
   });
 
   test("config cards show default values", async ({ page }) => {
-    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
-    await expect(page.getByTestId("config-card-rest")).toContainText("0:10");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x3");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
   });
 
   test("shows total time and play button", async ({ page }) => {
@@ -35,8 +35,8 @@ test.describe("Timer", () => {
   });
 
   test("total time is calculated correctly", async ({ page }) => {
-    // Default: 30s work * 3 reps + 10s rest * 2 = 110s total => 1:50
-    await expect(page.getByTestId("total-time")).toHaveText("1:50");
+    // Default (EMOM): 60s work * 10 reps + 0s rest * 9 = 600s total => 10:00
+    await expect(page.getByTestId("total-time")).toHaveText("10:00");
   });
 
   test("tapping work card opens ruler picker", async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe("Timer", () => {
     // Cancel without selecting a value
     await page.getByRole("button", { name: "Cancel" }).click();
     // Should return to cards with original value
-    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
   });
 
   test("play button starts timer with getReady phase", async ({ page }) => {
@@ -294,7 +294,7 @@ test.describe("Timer", () => {
   test("ruler fill covers tick marks (no visible lines through fill)", async ({
     page,
   }) => {
-    // Open work picker — default 30s fills 8.3%, covering tick-5 at 1.4%
+    // Open work picker — default 60s (EMOM) covers tick-5
     await page.getByTestId("config-card-work").click();
 
     const fill = page.locator(".fill");
@@ -314,7 +314,10 @@ test.describe("Timer", () => {
   });
 
   test("ruler fill covers ticks in rest picker too", async ({ page }) => {
-    // Open rest picker — default 10s fills 8.3%, covering tick-5 at 4.2%
+    // Select Stretch preset (rest=10s) so the rest fill has height
+    await page.getByTestId("presets-button").click();
+    await page.getByTestId("preset-stretch").click();
+    // Open rest picker
     await page.getByTestId("config-card-rest").click();
 
     const fill = page.locator(".fill");
@@ -698,7 +701,7 @@ test.describe("Timer", () => {
     // Should still be paused (swipe doesn't resume)
     await expect(page.locator(".app")).toHaveClass(/paused/);
 
-    // Countdown should have changed (skipped to work phase = 00:30)
+    // Countdown should have changed (skipped to work phase = 01:00)
     const timeAfter = await page.getByTestId("countdown-time").textContent();
     expect(timeAfter).not.toBe(timeBefore);
   });

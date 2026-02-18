@@ -2,7 +2,7 @@
 
 ## Overview
 
-The app includes built-in workout presets that populate all three sliders (work, rest, repeats) with a single tap. Users can select a preset and then adjust values if needed before starting.
+The app includes built-in workout presets that populate all three sliders (work, rest, repeats) with a single tap. Users can select a preset and then adjust values if needed before starting. EMOM is the default workout when the app opens.
 
 ## Presets
 
