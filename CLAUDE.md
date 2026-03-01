@@ -30,3 +30,7 @@
 - Sounds: bell on work start, descending chime on rest start, countdown dings at 3/2/1, fanfare on finish
 - Pause/resume: subtle toggle sounds, tap screen to resume (no resume button)
 - Background colors: getReady/rest = yellow `#FFBA08`, work = green `#2ECC71`, paused = black, finished = black/white flash (3s)
+
+## Deployment
+- Production is deployed on the infra VM as part of its Docker Compose stack
+- Push to `main` and redeploy the Docker Compose stack on the infra VM to update production
