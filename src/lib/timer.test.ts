@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, resetAudioContext, resumeAudioContext } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, playPauseSound, playResumeSound, playCountdownDing, resetAudioContext, resumeAudioContext } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -659,14 +659,14 @@ describe("pause/resume wall-clock correctness", () => {
     // Run 2s into getReady
     vi.advanceTimersByTime(2000);
     expect(get(timer.phase)).toBe("getReady");
-    expect(get(timer.remaining)).toBe(3);
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION - 2);
 
     timer.pause();
     vi.advanceTimersByTime(30000);
-    expect(get(timer.remaining)).toBe(3); // unchanged
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION - 2); // unchanged
 
     timer.start();
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime((GET_READY_DURATION - 2) * 1000);
     expect(get(timer.phase)).toBe("work");
     expect(get(timer.remaining)).toBe(30);
 
@@ -1107,8 +1107,8 @@ describe("default volume", () => {
 });
 
 describe("GET_READY_DURATION constant", () => {
-  it("is exported and equals 5", () => {
-    expect(GET_READY_DURATION).toBe(5);
+  it("is exported and equals 10", () => {
+    expect(GET_READY_DURATION).toBe(10);
   });
 });
 
@@ -1184,7 +1184,7 @@ describe("sound playback", () => {
       start: vi.fn(),
       stop: vi.fn(),
       type: "",
-      frequency: { value: 0 },
+      frequency: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
     };
     mockGain = {
       connect: vi.fn(),
@@ -1317,6 +1317,43 @@ describe("sound playback", () => {
     mockCtx.state = "running";
     playWorkStartSound();
     expect(mockCtx.resume).not.toHaveBeenCalled();
+  });
+
+  it("playPauseSound creates oscillator with frequency sweep", () => {
+    playPauseSound();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockCtx.createGain).toHaveBeenCalled();
+    // Check frequency sweep starts at 500Hz
+    expect(mockOscillator.frequency.setValueAtTime).toBeDefined();
+  });
+
+  it("playResumeSound creates oscillator with frequency sweep", () => {
+    playResumeSound();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockCtx.createGain).toHaveBeenCalled();
+  });
+
+  it("playCountdownDing creates oscillator at 880Hz", () => {
+    playCountdownDing();
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockCtx.createGain).toHaveBeenCalled();
+    const setCalls = mockGain.gain.setValueAtTime.mock.calls;
+    expect(setCalls.length).toBeGreaterThan(0);
+    for (const call of setCalls) {
+      expect(call[0]).toBeGreaterThan(0);
+    }
+  });
+
+  it("playPauseSound is silent when masterVolume is 0", () => {
+    setMasterVolume(0);
+    playPauseSound();
+    expect(mockOscillator.start).not.toHaveBeenCalled();
+  });
+
+  it("playResumeSound is silent when masterVolume is 0", () => {
+    setMasterVolume(0);
+    playResumeSound();
+    expect(mockOscillator.start).not.toHaveBeenCalled();
   });
 });
 

@@ -20,7 +20,7 @@ The layout is a vertical flex column with three sections:
 | Get Ready     | `#FFBA08` (yellow) | Black   |
 | Work          | `#2ECC71` (green)  | Black   |
 | Rest          | `#FFBA08` (yellow) | Black   |
-| Paused        | `#000` (black)  | White      |
+| Paused        | `#000` (black)  | Amber (phase header), white (timer) |
 | Finished      | Black/white flash (3s) | Inverse |
 
 The full-screen background color provides an unmistakable visual signal of the current phase — visible from across the gym.
@@ -82,6 +82,10 @@ Idle screen shows three config cards (Work, Rest, Repeats) that open full-screen
 - Label (e.g., "Work")
 - Formatted current value (e.g., "00:30")
 - Colored accent matching the phase color
+
+## Pause Screen
+
+When the timer is paused, the PhaseHeader remains visible at the top showing the current phase and rep count in amber text on a black background. The countdown display shows the paused time. Tapping the screen (or using skip gestures) resumes the timer — no separate resume button is displayed.
 
 ## Progress Bar
 

@@ -26,13 +26,13 @@ The timeline is an array of segments, each with:
 
 Example for Work=30s, Rest=10s, Repeats=3:
 ```
-[0s]  getReady (5s)
-[5s]  work rep 1 (30s)
-[35s] rest rep 1 (10s)
-[45s] work rep 2 (30s)
-[75s] rest rep 2 (10s)
-[85s] work rep 3 (30s)
-[115s] → finished
+[0s]  getReady (10s)
+[10s] work rep 1 (30s)
+[40s] rest rep 1 (10s)
+[50s] work rep 2 (30s)
+[80s] rest rep 2 (10s)
+[90s] work rep 3 (30s)
+[120s] → finished
 ```
 
 Note: no rest period after the final work rep.
@@ -105,5 +105,5 @@ A `visibilitychange` listener triggers `syncState()` immediately when the page b
 
 ## Constants
 
-- `GET_READY_DURATION`: 5 seconds
+- `GET_READY_DURATION`: 10 seconds
 - `MAX_VOLUME`: 32.0 (3200% for cutting through gym noise)

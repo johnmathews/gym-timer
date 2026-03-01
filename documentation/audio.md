@@ -10,6 +10,9 @@ The timer uses the Web Audio API to generate synthesized sounds for phase transi
 |-------------|-----------------------|------------------------------------------|
 | Work start  | `playWorkStartSound`  | Bright ascending triad: C6 → E6 → G6    |
 | Rest start  | `playRestStartSound`  | Descending two-tone chime: G5 → C5       |
+| Pause       | `playPauseSound`      | Descending tone: 500Hz → 350Hz           |
+| Resume      | `playResumeSound`     | Ascending tone: 350Hz → 500Hz            |
+| Countdown tick (3/2/1 before work) | `playCountdownDing` | 880Hz A5 sine tone |
 | Finish      | `playFinishSound`     | Ascending major chord fanfare: C5 → E5 → G5 |
 
 Each sound is built from overlapping sine wave oscillators with exponential decay envelopes.
@@ -59,6 +62,14 @@ iOS Safari requires special handling for audio:
 2. **Audio session type** is set to `"ambient"` via `navigator.audioSession.type` so timer sounds mix with other apps (YouTube, Spotify) instead of pausing them
 3. **Silent WAV playback** — a minimal 1-sample WAV is played during the user gesture to fully initialize the iOS audio session
 4. **Defensive resume** — `playTone()` checks if the context was re-suspended (e.g., after screen lock/unlock) and resumes it
+
+### Audio Robustness
+
+To handle iOS re-suspension after screen lock/unlock and app backgrounding:
+
+- **`warmAudioContext()`** — Called on visibility change (when page becomes visible) to re-initialize the audio context and reset state
+- **`startKeepAlive()` / `stopKeepAlive()`** — Periodic silent oscillator (every 30s) keeps the audio context active and prevents re-suspension during long pauses
+- **`_audioSessionUnlocked` flag** — Reset on `visibilitychange→hidden` to detect when audio context needs re-warming on next visibility change
 
 ### Trade-offs
 

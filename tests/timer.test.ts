@@ -88,8 +88,8 @@ test.describe("Timer", () => {
     // Should start with getReady
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
 
-    // Fast-forward past getReady (5s)
-    await page.clock.fastForward(6000);
+    // Fast-forward past getReady (10s)
+    await page.clock.fastForward(11000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
   });
 
@@ -110,12 +110,11 @@ test.describe("Timer", () => {
     const app = page.locator(".app");
     await expect(app).toHaveClass(/paused/);
 
-    // Should show resume and reset buttons
-    await expect(page.getByTestId("resume-button")).toBeVisible();
+    // Should show reset button (no resume button — tap screen to resume)
     await expect(page.getByTestId("reset-button")).toBeVisible();
 
-    // Phase header should be hidden when paused
-    await expect(page.getByTestId("phase-header")).not.toBeVisible();
+    // Phase header should be visible when paused
+    await expect(page.getByTestId("phase-header")).toBeVisible();
   });
 
   test("counts down and finishes with alert", async ({ page }) => {
@@ -129,8 +128,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s) + work (5s)
-    await page.clock.fastForward(11000);
+    // Fast-forward past getReady (10s) + work (5s)
+    await page.clock.fastForward(16000);
 
     await expect(page.getByTestId("countdown-time")).toHaveText("00:00");
     const app = page.locator(".app");
@@ -153,8 +152,8 @@ test.describe("Timer", () => {
     await page.clock.fastForward(5000);
     await expect(page.getByTestId("countdown-time")).toHaveText(timeText!);
 
-    // Tap resume button to resume
-    await page.getByTestId("resume-button").click();
+    // Tap screen to resume
+    await page.locator(".countdown-area").click();
     await expect(app).not.toHaveClass(/paused/);
   });
 
@@ -198,8 +197,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s)
-    await page.clock.fastForward(6000);
+    // Fast-forward past getReady (10s)
+    await page.clock.fastForward(11000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
     await expect(page.getByTestId("rep-counter")).toBeVisible();
     await expect(page.getByTestId("rep-counter")).toHaveText("1/2");
@@ -224,8 +223,8 @@ test.describe("Timer", () => {
     // Should start in getReady phase
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
 
-    // getReady (5s) → work rep 1
-    await page.clock.fastForward(6000);
+    // getReady (10s) → work rep 1
+    await page.clock.fastForward(11000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
     await expect(page.getByTestId("rep-counter")).toHaveText("1/2");
 
@@ -264,8 +263,8 @@ test.describe("Timer", () => {
   test("full-screen green background during work phase", async ({ page }) => {
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s)
-    await page.clock.fastForward(6000);
+    // Fast-forward past getReady (10s)
+    await page.clock.fastForward(11000);
     const app = page.locator(".app");
     await expect(app).toHaveClass(/work/);
   });
@@ -285,8 +284,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s) + work (5s) into rest
-    await page.clock.fastForward(11000);
+    // Fast-forward past getReady (10s) + work (5s) into rest
+    await page.clock.fastForward(16000);
     const app = page.locator(".app");
     await expect(app).toHaveClass(/rest/);
   });
@@ -314,10 +313,10 @@ test.describe("Timer", () => {
   });
 
   test("ruler fill covers ticks in rest picker too", async ({ page }) => {
-    // Select Stretch preset (rest=10s) so the rest fill has height
-    await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-stretch").click();
-    // Open rest picker
+    // Set rest to 10s so the rest fill has height
+    await page.getByTestId("config-card-rest").click();
+    await page.getByTestId("ruler-tick-10").click({ force: true });
+    // Re-open rest picker
     await page.getByTestId("config-card-rest").click();
 
     const fill = page.locator(".fill");
@@ -347,8 +346,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s) + work (5s)
-    await page.clock.fastForward(11000);
+    // Fast-forward past getReady (10s) + work (5s)
+    await page.clock.fastForward(16000);
     await expect(page.getByTestId("countdown-time")).toHaveText("00:00");
 
     const app = page.locator(".app");
@@ -423,7 +422,7 @@ test.describe("Timer", () => {
     await page.getByTestId("ruler-tick-1").click({ force: true });
 
     await page.getByTestId("play-button").click();
-    await page.clock.fastForward(11000);
+    await page.clock.fastForward(16000);
 
     const app = page.locator(".app");
     await expect(app).toHaveClass(/finished/);
@@ -443,7 +442,7 @@ test.describe("Timer", () => {
     await page.getByTestId("ruler-tick-1").click({ force: true });
 
     await page.getByTestId("play-button").click();
-    await page.clock.fastForward(11000);
+    await page.clock.fastForward(16000);
 
     await expect(page.getByTestId("reset-button")).toBeVisible();
     await expect(page.getByTestId("resume-button")).not.toBeVisible();
@@ -456,8 +455,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Fast-forward past getReady (5s)
-    await page.clock.fastForward(6000);
+    // Fast-forward past getReady (10s)
+    await page.clock.fastForward(11000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
 
     const segments = page.locator('[data-testid="progress-bar"] .segment');
@@ -467,8 +466,8 @@ test.describe("Timer", () => {
   test("getReady countdown shows correct initial time", async ({ page }) => {
     await page.getByTestId("play-button").click();
 
-    // Should show 00:05 at the start of getReady
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
+    // Should show 00:10 at the start of getReady
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
   });
 
@@ -481,7 +480,7 @@ test.describe("Timer", () => {
     await page.getByTestId("ruler-tick-1").click({ force: true });
 
     await page.getByTestId("play-button").click();
-    await page.clock.fastForward(11000);
+    await page.clock.fastForward(16000);
     await expect(page.getByTestId("countdown-time")).toHaveText("00:00");
 
     // Click reset to go back to idle
@@ -491,7 +490,7 @@ test.describe("Timer", () => {
     // Start again
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
   });
 
   test("screen tap resumes from paused state", async ({ page }) => {
@@ -572,7 +571,7 @@ test.describe("Timer", () => {
 
   test("selecting EMOM preset populates sliders", async ({ page }) => {
     await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom").click();
+    await page.getByTestId("preset-emom10").click();
     await expect(page.getByTestId("preset-list")).not.toBeVisible();
     await expect(page.getByTestId("config-card-work")).toContainText(
       "Work 1:00",
@@ -583,17 +582,17 @@ test.describe("Timer", () => {
 
   test("total time updates after preset selection", async ({ page }) => {
     await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom").click();
+    await page.getByTestId("preset-emom10").click();
     // EMOM: 60s work * 10 + 0s rest * 9 = 600s = 10:00
     await expect(page.getByTestId("total-time")).toHaveText("10:00");
   });
 
   test("can start timer after preset selection", async ({ page }) => {
     await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom").click();
+    await page.getByTestId("preset-emom10").click();
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
   });
 
   // --- Swipe gestures ---
@@ -639,8 +638,8 @@ test.describe("Timer", () => {
 
     await page.getByTestId("play-button").click();
 
-    // Advance past getReady (5s) into work, then 1 more second
-    await page.clock.fastForward(6000);
+    // Advance past getReady (10s) into work, then 1 more second
+    await page.clock.fastForward(11000);
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
 
     // Swipe right (deltaX > 50) — like pulling previous content back in
@@ -679,7 +678,7 @@ test.describe("Timer", () => {
 
   test("swipe while paused skips without resuming", async ({ page }) => {
     await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:05");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
 
     // Tap to pause
     await page.getByTestId("active-screen").click();

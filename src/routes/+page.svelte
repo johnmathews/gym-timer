@@ -6,8 +6,14 @@
   playFinishSound,
   playRestStartSound,
   playWorkStartSound,
+  playPauseSound,
+  playResumeSound,
+  playCountdownDing,
   initVolume,
   resumeAudioContext,
+  warmAudioContext,
+  startKeepAlive,
+  stopKeepAlive,
  } from "$lib/timer";
  import { log } from "$lib/logger";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
@@ -29,6 +35,7 @@
  let prevStatus: string = "idle";
  let prevPhase: string = "work";
  let prevRep: number = 1;
+ let prevRemaining: number = 0;
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
@@ -58,10 +65,12 @@
  }
 
  $effect(() => {
-  if (isActive && canWakeLock) {
-   acquireWakeLock();
+  if (isActive) {
+   if (canWakeLock) acquireWakeLock();
+   startKeepAlive();
   } else {
    releaseWakeLock();
+   stopKeepAlive();
   }
  });
 
@@ -72,8 +81,9 @@
   timer.configure(duration, rest, reps);
 
   function handleVisibility() {
-   if (document.visibilityState === "visible" && isActive && !wakeLock) {
-    acquireWakeLock();
+   if (document.visibilityState === "visible") {
+    if (isActive && !wakeLock) acquireWakeLock();
+    if (isActive) warmAudioContext();
    }
   }
   document.addEventListener("visibilitychange", handleVisibility);
@@ -114,6 +124,7 @@
   const s = $status;
   const p = $phase;
   const r = $currentRep;
+  const rem = $remaining;
   if (s === "finished" && prevStatus !== "finished") {
    log("ui:finishSound");
    playFinishSound();
@@ -126,10 +137,16 @@
     log("ui:restStartSound");
     playRestStartSound();
    }
+   // Countdown ding 3, 2, 1 seconds before work starts
+   if ((p === "getReady" || p === "rest") && rem <= 3 && rem >= 1 && rem < prevRemaining) {
+    log("ui:countdownDing", { remaining: rem });
+    playCountdownDing();
+   }
   }
   prevStatus = s;
   prevPhase = p;
   prevRep = r;
+  prevRemaining = rem;
  });
 
  const canStart = $derived(duration > 0);
@@ -172,18 +189,14 @@
    resumeAudioContext();
    if ($status === "running") {
     log("ui:pause");
+    playPauseSound();
     timer.pause();
    } else if ($status === "paused") {
     log("ui:resume");
+    playResumeSound();
     timer.start();
    }
   }
- }
-
- function handleResume() {
-  resumeAudioContext();
-  log("ui:resume");
-  timer.start();
  }
 
  function handleReset() {
@@ -341,9 +354,7 @@
     <FullscreenButton />
     <VolumeControl />
    </div>
-   {#if !isPaused}
-    <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
-   {/if}
+   <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
 
    <div class="countdown-area">
     {#if !isFinished}
@@ -374,12 +385,6 @@
         stroke-linecap="round"
         stroke-linejoin="round"
        />
-      </svg>
-     </button>
-     <button class="icon-btn play-active-btn" data-testid="resume-button" onclick={handleResume} aria-label="Resume">
-      <svg viewBox="0 0 70 70" aria-hidden="true">
-       <circle cx="35" cy="35" r="35" fill="#FFBA08" />
-       <polygon points="28,20 28,50 52,35" fill="rgba(0,0,0,0.85)" />
       </svg>
      </button>
     {:else if isFinished}
@@ -583,9 +588,22 @@
   flex-shrink: 0;
  }
 
- /* Paused state: amber time */
+ /* Paused state: amber time and phase header */
  .app.paused :global(.time) {
   color: #ffba08;
+ }
+
+ .app.paused :global(.phase-label),
+ .app.paused :global(.rep-counter) {
+  color: #ffba08;
+ }
+
+ .app.paused :global(.segment) {
+  background: rgba(255, 255, 255, 0.15);
+ }
+
+ .app.paused :global(.segment.active) {
+  background: #ffba08;
  }
 
  .icon-btn {
@@ -602,16 +620,6 @@
  .icon-btn:active {
   opacity: 0.7;
   transform: scale(0.92);
- }
-
- .play-active-btn {
-  width: 70px;
-  height: 70px;
- }
-
- .play-active-btn svg {
-  width: 100%;
-  height: 100%;
  }
 
  .small-btn {

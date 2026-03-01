@@ -4,7 +4,7 @@ import { log } from "./logger";
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
 export type TimerPhase = "getReady" | "work" | "rest";
 
-export const GET_READY_DURATION = 5;
+export const GET_READY_DURATION = 10;
 
 const VOLUME_STORAGE_KEY = "timer-volume";
 export const MAX_VOLUME = 32.0;
@@ -346,6 +346,7 @@ export function createTimer() {
 let _audioCtx: AudioContext | null = null;
 let _audioSessionUnlocked = false;
 let _masterCompressor: DynamicsCompressorNode | null = null;
+let _keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
 // Minimal silent WAV (1 sample, 16-bit mono, 44.1kHz) used to upgrade
 // iOS Safari's audio session from "ambient" to "playback".
@@ -365,6 +366,17 @@ export function resetAudioContext(): void {
   _audioCtx = null;
   _audioSessionUnlocked = false;
   _masterCompressor = null;
+  stopKeepAlive();
+}
+
+// Reset audio session unlock flag when page goes hidden so the next
+// visible re-plays the silent WAV and re-sets audioSession.type.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      _audioSessionUnlocked = false;
+    }
+  });
 }
 
 /** Resume the shared AudioContext and upgrade the audio session — must be
@@ -495,5 +507,145 @@ export function playWorkStartSound() {
     playTone(ctx, 1568, t + 0.16, 0.3, 1.0);  // G6 (ring longer)
   } catch {
     // Web Audio API not available
+  }
+}
+
+/** Short descending tone: subtle "powering down" for pause */
+export function playPauseSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    const effectiveVolume = 0.6 * _masterVolume;
+    if (effectiveVolume <= 0) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    if (_masterVolume > 1.0) {
+      if (!_masterCompressor) {
+        _masterCompressor = ctx.createDynamicsCompressor();
+        _masterCompressor.threshold.value = -10;
+        _masterCompressor.knee.value = 10;
+        _masterCompressor.ratio.value = 4;
+        _masterCompressor.attack.value = 0.003;
+        _masterCompressor.release.value = 0.1;
+        _masterCompressor.connect(ctx.destination);
+      }
+      gain.connect(_masterCompressor);
+    } else {
+      gain.connect(ctx.destination);
+    }
+
+    osc.type = "sine";
+    const safeStart = Math.max(t, ctx.currentTime + 0.005);
+    osc.frequency.setValueAtTime(500, safeStart);
+    osc.frequency.exponentialRampToValueAtTime(350, safeStart + 0.1);
+    gain.gain.value = effectiveVolume;
+    gain.gain.cancelScheduledValues(0);
+    gain.gain.setValueAtTime(effectiveVolume, safeStart);
+    gain.gain.exponentialRampToValueAtTime(0.001, safeStart + 0.12);
+    osc.start(safeStart);
+    osc.stop(safeStart + 0.12);
+  } catch {
+    // Web Audio API not available
+  }
+}
+
+/** Short ascending tone: subtle "powering up" for resume */
+export function playResumeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    const effectiveVolume = 0.6 * _masterVolume;
+    if (effectiveVolume <= 0) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    if (_masterVolume > 1.0) {
+      if (!_masterCompressor) {
+        _masterCompressor = ctx.createDynamicsCompressor();
+        _masterCompressor.threshold.value = -10;
+        _masterCompressor.knee.value = 10;
+        _masterCompressor.ratio.value = 4;
+        _masterCompressor.attack.value = 0.003;
+        _masterCompressor.release.value = 0.1;
+        _masterCompressor.connect(ctx.destination);
+      }
+      gain.connect(_masterCompressor);
+    } else {
+      gain.connect(ctx.destination);
+    }
+
+    osc.type = "sine";
+    const safeStart = Math.max(t, ctx.currentTime + 0.005);
+    osc.frequency.setValueAtTime(350, safeStart);
+    osc.frequency.exponentialRampToValueAtTime(500, safeStart + 0.1);
+    gain.gain.value = effectiveVolume;
+    gain.gain.cancelScheduledValues(0);
+    gain.gain.setValueAtTime(effectiveVolume, safeStart);
+    gain.gain.exponentialRampToValueAtTime(0.001, safeStart + 0.12);
+    osc.start(safeStart);
+    osc.stop(safeStart + 0.12);
+  } catch {
+    // Web Audio API not available
+  }
+}
+
+/** Single short tick at A5 (880Hz) — countdown warning before work */
+export function playCountdownDing() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playTone(ctx, 880, t, 0.08, 0.7);
+  } catch {
+    // Web Audio API not available
+  }
+}
+
+/** Full re-warmup: resume AudioContext + replay silent WAV + set ambient.
+ *  Call on visibilitychange → visible when the timer is active. */
+export function warmAudioContext(): void {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+  } catch {
+    // Web Audio API not available
+  }
+  // Force re-unlock (flag was reset on hidden)
+  _audioSessionUnlocked = false;
+  resumeAudioContext();
+}
+
+/** Start a periodic silent oscillator (~30s) to prevent iOS from
+ *  reclaiming the audio session while the timer is running. */
+export function startKeepAlive(): void {
+  if (_keepAliveInterval) return;
+  _keepAliveInterval = setInterval(() => {
+    try {
+      const ctx = getAudioContext();
+      if (ctx.state === "suspended") ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.value = 0;
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.01);
+    } catch {
+      // ignore
+    }
+  }, 30000);
+}
+
+/** Stop the periodic keep-alive oscillator. */
+export function stopKeepAlive(): void {
+  if (_keepAliveInterval) {
+    clearInterval(_keepAliveInterval);
+    _keepAliveInterval = null;
   }
 }
