@@ -21,7 +21,7 @@ The layout is a vertical flex column with three sections:
 | Work          | `#2ECC71` (green)  | Black   |
 | Rest          | `#FFBA08` (yellow) | Black   |
 | Paused        | `#000` (black)  | Amber (phase header), white (timer) |
-| Finished      | Black/white flash (3s) | Inverse |
+| Finished      | Rainbow party flash (~10s) | White |
 
 The full-screen background color provides an unmistakable visual signal of the current phase — visible from across the gym.
 

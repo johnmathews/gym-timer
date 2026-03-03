@@ -138,7 +138,9 @@
     playRestStartSound();
    }
    // Countdown ding 3, 2, 1 seconds before work starts
-   if ((p === "getReady" || p === "rest") && rem <= 3 && rem >= 1 && rem < prevRemaining) {
+   const beforeWork = p === "getReady" || p === "rest" ||
+    (p === "work" && rest === 0 && r < $totalReps);
+   if (beforeWork && rem <= 3 && rem >= 1 && rem < prevRemaining) {
     log("ui:countdownDing", { remaining: rem });
     playCountdownDing();
    }
@@ -484,13 +486,12 @@
  }
 
  .app.finished {
-  animation: finished-flash 1s steps(1) 3 forwards;
+  animation: finished-flash 1.2s steps(6) 8;
   background-color: #000;
  }
 
  .app.finished :global(.time),
  .app.finished .finished-btn {
-  animation: finished-flash-text 1s steps(1) 3 forwards;
   color: #fff;
  }
 
@@ -633,20 +634,11 @@
  }
 
  @keyframes finished-flash {
-  0% {
-   background-color: #000;
-  }
-  50% {
-   background-color: #fff;
-  }
- }
-
- @keyframes finished-flash-text {
-  0% {
-   color: #fff;
-  }
-  50% {
-   color: rgba(0, 0, 0, 0.85);
-  }
+  0%      { background-color: #FF1744; }
+  16.66%  { background-color: #FF9100; }
+  33.33%  { background-color: #FFEA00; }
+  50%     { background-color: #00E676; }
+  66.66%  { background-color: #2979FF; }
+  83.33%  { background-color: #D500F9; }
  }
 </style>
