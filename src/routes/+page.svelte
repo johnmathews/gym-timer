@@ -486,7 +486,7 @@
  }
 
  .app.finished {
-  animation: finished-flash 5s steps(10) 2;
+  animation: finished-flash 10s steps(10) 1;
   background-color: #000;
  }
 
