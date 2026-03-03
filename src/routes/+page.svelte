@@ -486,7 +486,7 @@
  }
 
  .app.finished {
-  animation: finished-flash 1.2s steps(6) 8;
+  animation: finished-flash 5s steps(10) 2;
   background-color: #000;
  }
 
@@ -634,11 +634,15 @@
  }
 
  @keyframes finished-flash {
-  0%      { background-color: #FF1744; }
-  16.66%  { background-color: #FF9100; }
-  33.33%  { background-color: #FFEA00; }
-  50%     { background-color: #00E676; }
-  66.66%  { background-color: #2979FF; }
-  83.33%  { background-color: #D500F9; }
+  0%   { background-color: #FF1744; }
+  10%  { background-color: #FF6D00; }
+  20%  { background-color: #FF9100; }
+  30%  { background-color: #FFEA00; }
+  40%  { background-color: #00E676; }
+  50%  { background-color: #00BCD4; }
+  60%  { background-color: #2979FF; }
+  70%  { background-color: #651FFF; }
+  80%  { background-color: #D500F9; }
+  90%  { background-color: #FF4081; }
  }
 </style>
