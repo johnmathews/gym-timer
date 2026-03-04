@@ -717,11 +717,12 @@
   }
 
   .home .cards :global(.config-card) {
-   height: 65px;
+   height: 78px;
   }
 
   .home .cards :global(.label) {
-   font-size: 1.5rem;
+   font-size: 1.8rem;
+   font-weight: 600;
   }
 
   .home .cards :global(.value) {
