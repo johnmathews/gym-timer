@@ -705,6 +705,55 @@ test.describe("Timer", () => {
     expect(timeAfter).not.toBe(timeBefore);
   });
 
+  test("landscape layout uses two-column grid on small screens", async ({
+    page,
+  }) => {
+    // iPhone-like landscape: wide but short
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/");
+
+    const cards = page.locator(".cards");
+    const time = page.getByTestId("total-time");
+    const cardsBox = await cards.boundingBox();
+    const timeBox = await time.boundingBox();
+    expect(cardsBox).not.toBeNull();
+    expect(timeBox).not.toBeNull();
+    // Cards and time should be side by side (time to the right of cards)
+    expect(timeBox!.x).toBeGreaterThan(cardsBox!.x + cardsBox!.width - 10);
+  });
+
+  test("landscape layout removes max-width constraint", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/");
+
+    const app = page.locator(".app");
+    const box = await app.boundingBox();
+    expect(box).not.toBeNull();
+    // Should use full width, not capped at 500px
+    expect(box!.width).toBeGreaterThan(600);
+  });
+
+  test("portrait layout is unchanged on small screens", async ({ page }) => {
+    // iPhone portrait
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const app = page.locator(".app");
+    const appBox = await app.boundingBox();
+    expect(appBox).not.toBeNull();
+    // Should still be constrained (not full 390px or wider)
+    expect(appBox!.width).toBeLessThanOrEqual(500);
+
+    // Cards and time should be stacked vertically (time below cards)
+    const cards = page.locator(".cards");
+    const time = page.getByTestId("total-time");
+    const cardsBox = await cards.boundingBox();
+    const timeBox = await time.boundingBox();
+    expect(cardsBox).not.toBeNull();
+    expect(timeBox).not.toBeNull();
+    expect(timeBox!.y).toBeGreaterThan(cardsBox!.y + cardsBox!.height - 1);
+  });
+
   test("vertical swipe does not trigger skip", async ({ page }) => {
     // Need multi-rep so phase header shows
     await page.getByTestId("config-card-repeat").click();
