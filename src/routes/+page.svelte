@@ -714,7 +714,7 @@
 
   .home :global(.total-time-display .row) {
    justify-content: center;
-   gap: 8px;
+   gap: 30px;
   }
 
   .home :global(.total-time-display .play-btn) {
