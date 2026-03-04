@@ -733,6 +733,21 @@ test.describe("Timer", () => {
     expect(box!.width).toBeGreaterThan(600);
   });
 
+  test("landscape toolbar-to-content gap is compact", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/");
+
+    const toolbar = page.locator(".toolbar");
+    const cards = page.locator(".cards");
+    const toolbarBox = await toolbar.boundingBox();
+    const cardsBox = await cards.boundingBox();
+    expect(toolbarBox).not.toBeNull();
+    expect(cardsBox).not.toBeNull();
+    const gap = cardsBox!.y - (toolbarBox!.y + toolbarBox!.height);
+    // Gap between toolbar bottom and cards top should be small (under 30px)
+    expect(gap).toBeLessThan(30);
+  });
+
   test("portrait layout is unchanged on small screens", async ({ page }) => {
     // iPhone portrait
     await page.setViewportSize({ width: 390, height: 844 });

@@ -2,7 +2,6 @@
  import { onMount, onDestroy } from "svelte";
  import {
   createTimer,
-  GET_READY_DURATION,
   playFinishSound,
   playRestStartSound,
   playWorkStartSound,
@@ -138,8 +137,7 @@
     playRestStartSound();
    }
    // Countdown ding 3, 2, 1 seconds before work starts
-   const beforeWork = p === "getReady" || p === "rest" ||
-    (p === "work" && rest === 0 && r < $totalReps);
+   const beforeWork = p === "getReady" || p === "rest" || (p === "work" && rest === 0 && r < $totalReps);
    if (beforeWork && rem <= 3 && rem >= 1 && rem < prevRemaining) {
     log("ui:countdownDing", { remaining: rem });
     playCountdownDing();
@@ -298,11 +296,11 @@
    <div class="home-right">
     <div class="toolbar">
      <FullscreenButton />
-     <button class="icon-btn" data-testid="presets-button" onclick={() => showPresets = true} aria-label="Workouts">
+     <button class="icon-btn" data-testid="presets-button" onclick={() => (showPresets = true)} aria-label="Workouts">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-       <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-       <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-       <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+       <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+       <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+       <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
       </svg>
      </button>
      <VolumeControl />
@@ -312,7 +310,7 @@
    </div>
   </div>
  {:else if showPresets}
-  <PresetList presets={PRESETS} onselect={handlePresetSelect} onclose={() => showPresets = false} />
+  <PresetList presets={PRESETS} onselect={handlePresetSelect} onclose={() => (showPresets = false)} />
  {:else if activePicker === "work"}
   <RulerPicker
    label="Work"
@@ -364,14 +362,32 @@
 
    <div class="countdown-area">
     {#if !isFinished}
-     <button class="skip-btn skip-back" onclick={() => { resumeAudioContext(); timer.skipBackward(); }} aria-label="Previous segment">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/></svg>
+     <button
+      class="skip-btn skip-back"
+      onclick={() => {
+       resumeAudioContext();
+       timer.skipBackward();
+      }}
+      aria-label="Previous segment"
+     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"
+       ><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor" /></svg
+      >
      </button>
     {/if}
     <CountdownDisplay remaining={$remaining} />
     {#if !isFinished}
-     <button class="skip-btn skip-fwd" onclick={() => { resumeAudioContext(); timer.skipForward(); }} aria-label="Next segment">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" fill="currentColor"/></svg>
+     <button
+      class="skip-btn skip-fwd"
+      onclick={() => {
+       resumeAudioContext();
+       timer.skipForward();
+      }}
+      aria-label="Next segment"
+     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"
+       ><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" fill="currentColor" /></svg
+      >
      </button>
     {/if}
    </div>
@@ -502,7 +518,7 @@
  }
 
  .app.finished {
-  animation: finished-flash 10s steps(10) 1;
+  animation: finished-flash 10s steps(5) 1;
   background-color: #000;
  }
 
@@ -650,23 +666,29 @@
  }
 
  @keyframes finished-flash {
-  0%   { background-color: #FF1744; }
-  10%  { background-color: #FF6D00; }
-  20%  { background-color: #FF9100; }
-  30%  { background-color: #FFEA00; }
-  40%  { background-color: #00E676; }
-  50%  { background-color: #00BCD4; }
-  60%  { background-color: #2979FF; }
-  70%  { background-color: #651FFF; }
-  80%  { background-color: #D500F9; }
-  90%  { background-color: #FF4081; }
+  0% {
+   background-color: #ff1744; /* red */
+  }
+  20% {
+   background-color: #ffea00; /* yellow */
+  }
+  40% {
+   background-color: #00e676; /* green */
+  }
+  60% {
+   background-color: #00bcd4; /* cyan */
+  }
+  80% {
+   background-color: #ff4081; /* pink */
+  }
  }
 
  /* Landscape layout for small screens (iPhones) — homescreen only */
  @media (orientation: landscape) and (max-height: 500px) {
   .app {
    max-width: none;
-   padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+   padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   }
 
   .home {
@@ -674,6 +696,7 @@
    grid-template-columns: 1fr 1fr;
    grid-template-rows: auto 1fr;
    gap: 0 24px;
+   padding-bottom: 5%;
   }
 
   .home-right {
