@@ -26,7 +26,7 @@ test.describe("Timer", () => {
   test("config cards show default values", async ({ page }) => {
     await expect(page.getByTestId("config-card-work")).toContainText("1:00");
     await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x6");
   });
 
   test("shows total time and play button", async ({ page }) => {
@@ -35,8 +35,8 @@ test.describe("Timer", () => {
   });
 
   test("total time is calculated correctly", async ({ page }) => {
-    // Default (EMOM): 60s work * 10 reps + 0s rest * 9 = 600s total => 10:00
-    await expect(page.getByTestId("total-time")).toHaveText("10:00");
+    // Default (EMOM6): 60s work * 6 reps + 0s rest * 5 = 360s total => 6:00
+    await expect(page.getByTestId("total-time")).toHaveText("6:00");
   });
 
   test("tapping work card opens ruler picker", async ({ page }) => {

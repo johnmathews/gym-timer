@@ -31,7 +31,7 @@
 
  let duration = $state(60);
  let rest = $state(0);
- let reps = $state(10);
+ let reps = $state(6);
  let prevStatus: string = "idle";
  let prevPhase: string = "work";
  let prevRep: number = 1;
@@ -288,25 +288,29 @@
 >
  {#if $status === "idle" && !activePicker && !showPresets}
   <!-- Idle: show config cards + total time -->
-  <div class="cards">
-   <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
-   <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
-   <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
-  </div>
+  <div class="home">
+   <div class="cards">
+    <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
+    <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
+    <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
+   </div>
 
-  <div class="toolbar">
-   <FullscreenButton />
-   <button class="icon-btn" data-testid="presets-button" onclick={() => showPresets = true} aria-label="Workouts">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-     <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-     <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-     <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-   </button>
-   <VolumeControl />
-  </div>
+   <div class="home-right">
+    <div class="toolbar">
+     <FullscreenButton />
+     <button class="icon-btn" data-testid="presets-button" onclick={() => showPresets = true} aria-label="Workouts">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+       <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+       <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+       <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+     </button>
+     <VolumeControl />
+    </div>
 
-  <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
+    <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
+   </div>
+  </div>
  {:else if showPresets}
   <PresetList presets={PRESETS} onselect={handlePresetSelect} onclose={() => showPresets = false} />
  {:else if activePicker === "work"}
@@ -442,6 +446,18 @@
   align-items: center;
   transition: background-color 1s ease;
   background: #000;
+ }
+
+ .home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+ }
+
+ .home-right {
+  display: contents;
  }
 
  .cards {
@@ -644,5 +660,70 @@
   70%  { background-color: #651FFF; }
   80%  { background-color: #D500F9; }
   90%  { background-color: #FF4081; }
+ }
+
+ /* Landscape layout for small screens (iPhones) — homescreen only */
+ @media (orientation: landscape) and (max-height: 500px) {
+  .app {
+   max-width: none;
+   padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+
+  .home {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   grid-template-rows: auto 1fr;
+   gap: 0 24px;
+  }
+
+  .home-right {
+   display: contents;
+  }
+
+  .home .toolbar {
+   grid-column: 1 / -1;
+   grid-row: 1;
+   align-self: start;
+  }
+
+  .home .cards {
+   grid-column: 1;
+   grid-row: 2;
+   align-self: center;
+   gap: 6px;
+  }
+
+  .home .cards :global(.config-card) {
+   height: 65px;
+  }
+
+  .home .cards :global(.label) {
+   font-size: 1.5rem;
+  }
+
+  .home .cards :global(.value) {
+   font-size: 2.5rem;
+  }
+
+  .home :global(.total-time-display) {
+   grid-column: 2;
+   grid-row: 2;
+   align-self: center;
+   padding: 0;
+  }
+
+  .home :global(.total-time-display .row) {
+   justify-content: center;
+   gap: 8px;
+  }
+
+  .home :global(.total-time-display .play-btn) {
+   width: min(10vw, 5rem);
+  }
+
+  .home :global(.total-time-display .time) {
+   flex: 0;
+   font-size: min(25vw, 10rem);
+  }
  }
 </style>
