@@ -1,6 +1,7 @@
 # Gym Timer
 
-A simple gym workout timer web app. Slide to set a duration (up to 5 minutes), start the countdown, and get an audio + visual alert when time's up.
+A simple gym workout timer web app. Slide to set a duration (up to 5 minutes), start the countdown, and get an audio +
+visual alert when time's up.
 
 Built with SvelteKit as a static site, designed for touch interfaces and optimized for mobile/iOS.
 
@@ -68,11 +69,11 @@ The app will be available at `http://localhost:8080`.
 ```yaml
 # docker-compose.yml
 services:
-  gym-timer:
-    image: ghcr.io/johnmathews/gym-timer:latest
-    ports:
-      - "8080:80"
-    restart: unless-stopped
+ gym-timer:
+  image: ghcr.io/johnmathews/gym-timer:latest
+  ports:
+   - "8080:80"
+  restart: unless-stopped
 ```
 
 ```sh
