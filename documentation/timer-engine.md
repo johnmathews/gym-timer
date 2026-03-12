@@ -103,6 +103,8 @@ A `visibilitychange` listener triggers `syncState()` immediately when the page b
 3. If <=2s and not first segment → seek to previous segment's `startOffset`
 4. If first segment → restart it (seek to 0)
 
+**Get-ready insertion**: When skipBackward lands on a **work** segment, a `getReady` countdown is dynamically inserted before it in the timeline (unless one already precedes it). This gives the user a 10-second preparation period before work resumes. The `insertGetReady(beforeIdx)` helper splices the segment into the timeline and recalculates all subsequent `startOffset` values. Repeated skips to the same work segment reuse the existing getReady rather than inserting duplicates.
+
 ## Constants
 
 - `GET_READY_DURATION`: 10 seconds

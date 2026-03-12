@@ -299,6 +299,22 @@ export function createTimer() {
     }
   }
 
+  /** Insert a getReady segment before the given index and recalculate offsets. */
+  function insertGetReady(beforeIdx: number): void {
+    const rep = _timeline[beforeIdx].rep;
+    _timeline.splice(beforeIdx, 0, {
+      phase: "getReady",
+      rep,
+      duration: GET_READY_DURATION,
+      startOffset: 0, // recalculated below
+    });
+    // Recalculate all startOffsets from the insertion point onward
+    for (let i = beforeIdx; i < _timeline.length; i++) {
+      _timeline[i].startOffset =
+        i === 0 ? 0 : _timeline[i - 1].startOffset + _timeline[i - 1].duration;
+    }
+  }
+
   function skipBackward(): void {
     const currentStatus = getStore(status);
     if (currentStatus !== "running" && currentStatus !== "paused") return;
@@ -315,13 +331,26 @@ export function createTimer() {
     const seg = _timeline[idx];
     const timeInSeg = elapsedSec - seg.startOffset;
 
+    let targetIdx: number;
     if (timeInSeg > 2) {
-      seekTo(seg.startOffset * 1000);
+      targetIdx = idx;
     } else if (idx > 0) {
-      seekTo(_timeline[idx - 1].startOffset * 1000);
+      targetIdx = idx - 1;
     } else {
-      seekTo(0);
+      targetIdx = 0;
     }
+
+    const target = _timeline[targetIdx];
+    // If landing on a work segment and the preceding segment isn't already getReady, insert one
+    if (target.phase === "work" && (targetIdx === 0 || _timeline[targetIdx - 1].phase !== "getReady")) {
+      insertGetReady(targetIdx);
+      // targetIdx now points to the new getReady segment
+    } else if (target.phase === "work" && targetIdx > 0 && _timeline[targetIdx - 1].phase === "getReady") {
+      // A getReady already precedes this work segment — seek to the getReady instead
+      targetIdx = targetIdx - 1;
+    }
+
+    seekTo(_timeline[targetIdx].startOffset * 1000);
   }
 
   return {

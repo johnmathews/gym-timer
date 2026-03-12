@@ -136,9 +136,10 @@
     log("ui:restStartSound");
     playRestStartSound();
    }
-   // Countdown ding 3, 2, 1 seconds before work starts
+   // Countdown ding 5, 4, 3, 2, 1 seconds before work starts
    const beforeWork = p === "getReady" || p === "rest" || (p === "work" && rest === 0 && r < $totalReps);
-   if (beforeWork && rem <= 3 && rem >= 1 && rem < prevRemaining) {
+   const phaseChanged = p !== prevPhase || r !== prevRep;
+   if (beforeWork && rem <= 5 && rem >= 1 && (rem < prevRemaining || phaseChanged)) {
     log("ui:countdownDing", { remaining: rem });
     playCountdownDing();
    }
@@ -518,7 +519,7 @@
  }
 
  .app.finished {
-  animation: finished-flash 10s steps(5) 1;
+  animation: finished-flash 3s step-end 4;
   background-color: #000;
  }
 

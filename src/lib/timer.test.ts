@@ -860,7 +860,7 @@ describe("skipForward and skipBackward", () => {
     timer.destroy();
   });
 
-  it("skipBackward >2s into segment restarts current segment", () => {
+  it("skipBackward >2s into work inserts getReady before it", () => {
     const timer = createTimer();
     timer.configure(5, 3, 2);
     timer.start();
@@ -870,14 +870,13 @@ describe("skipForward and skipBackward", () => {
     expect(get(timer.remaining)).toBe(2);
 
     timer.skipBackward();
-    expect(get(timer.phase)).toBe("work");
-    expect(get(timer.currentRep)).toBe(1);
-    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
 
     timer.destroy();
   });
 
-  it("skipBackward <=2s into segment goes to previous segment", () => {
+  it("skipBackward <=2s into rest inserts getReady before previous work", () => {
     const timer = createTimer();
     timer.configure(5, 3, 2);
     timer.start();
@@ -886,9 +885,8 @@ describe("skipForward and skipBackward", () => {
     expect(get(timer.phase)).toBe("rest");
 
     timer.skipBackward();
-    expect(get(timer.phase)).toBe("work");
-    expect(get(timer.currentRep)).toBe(1);
-    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
 
     timer.destroy();
   });
@@ -938,7 +936,7 @@ describe("skipForward and skipBackward", () => {
     timer.destroy();
   });
 
-  it("skipBackward while paused updates position", () => {
+  it("skipBackward while paused inserts getReady before work", () => {
     const timer = createTimer();
     timer.configure(5, 3, 2);
     timer.start();
@@ -947,8 +945,8 @@ describe("skipForward and skipBackward", () => {
     timer.pause();
 
     timer.skipBackward();
-    expect(get(timer.phase)).toBe("work");
-    expect(get(timer.remaining)).toBe(5);
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
     expect(get(timer.status)).toBe("paused");
 
     timer.destroy();
@@ -1067,6 +1065,169 @@ describe("skipForward and skipBackward", () => {
     expect(get(timer.phase)).toBe("rest");
     expect(get(timer.currentRep)).toBe(1);
     expect(get(timer.remaining)).toBe(3);
+
+    timer.destroy();
+  });
+
+  it("skipBackward to work2 inserts getReady mid-workout", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 3s into work2 (getReady=10 + work1=5 + rest1=3 + 3s)
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    timer.skipBackward(); // >2s into work2, should insert getReady before work2
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    // After getReady completes, should transition to work2
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    timer.destroy();
+  });
+
+  it("repeated skipBackward to same work segment reuses existing getReady", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 3s into work1
+    vi.advanceTimersByTime((GET_READY_DURATION + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+
+    // First skipBackward inserts getReady
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    // Advance 3s into the getReady, then skip back again
+    vi.advanceTimersByTime(3000);
+    timer.skipBackward(); // should go to start of existing getReady, not insert another
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    timer.destroy();
+  });
+
+  it("skipBackward to rest does not insert getReady", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 1s into work2 (getReady=10 + work1=5 + rest1=3 + 1s)
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 1) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // <=2s into work2, should go back to rest1 (no getReady inserted for rest)
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(1);
+
+    timer.destroy();
+  });
+
+  it("skipBackward inserts getReady then timer completes normally", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 2);
+    timer.start();
+
+    // Advance to 3s into work2 (getReady=10 + work1=5 + 3s)
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // Skip back inserts getReady before work2
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Complete getReady + work2 → finished
+    vi.advanceTimersByTime((GET_READY_DURATION + 5) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("skipForward from inserted getReady advances to work", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 3s into work2
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // Skip back inserts getReady before work2
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Skip forward should jump to work2
+    timer.skipForward();
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+    expect(get(timer.remaining)).toBe(5);
+
+    timer.destroy();
+  });
+
+  it("skipBackward <=2s into inserted getReady goes to previous segment", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to 3s into work2
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 3) * 1000);
+
+    // Skip back inserts getReady before work2, lands on getReady
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Advance 1s into the inserted getReady (<=2s)
+    vi.advanceTimersByTime(1000);
+
+    // Skip back again — should go to rest1 (previous segment before inserted getReady)
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(1);
+    expect(get(timer.remaining)).toBe(3);
+
+    timer.destroy();
+  });
+
+  it("skipBackward with rest=0 inserts getReady between consecutive work segments", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 3);
+    timer.start();
+
+    // Advance to 3s into work2 (getReady=10 + work1=5 + 3s)
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3) * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // Skip back inserts getReady before work2
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+    expect(get(timer.remaining)).toBe(GET_READY_DURATION);
+
+    // Complete getReady → work2
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // Complete work2 → work3 (no rest)
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    // Complete work3 → finished
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.status)).toBe("finished");
 
     timer.destroy();
   });

@@ -12,7 +12,7 @@ The timer uses the Web Audio API to generate synthesized sounds for phase transi
 | Rest start  | `playRestStartSound`  | Descending two-tone chime: G5 → C5       |
 | Pause       | `playPauseSound`      | Descending tone: 500Hz → 350Hz           |
 | Resume      | `playResumeSound`     | Ascending tone: 350Hz → 500Hz            |
-| Countdown tick (3/2/1 before work) | `playCountdownDing` | 880Hz A5 sine tone (plays during getReady, rest, and work when rest=0) |
+| Countdown tick (5/4/3/2/1 before work) | `playCountdownDing` | 880Hz A5 sine tone (plays during getReady, rest, and work when rest=0) |
 | Finish      | `playFinishSound`     | Ascending major chord fanfare: C5 → E5 → G5 |
 
 Each sound is built from overlapping sine wave oscillators with exponential decay envelopes.
