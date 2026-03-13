@@ -21,7 +21,7 @@ The layout is a vertical flex column with three sections:
 | Work          | `#2ECC71` (green)  | Black   |
 | Rest          | `#FFBA08` (yellow) | Black   |
 | Paused        | `#000` (black)  | Amber (phase header), white (timer) |
-| Finished      | 3-color flash (red/yellow/green, 1s each, 4 cycles = 12s) | White |
+| Finished      | 4-color flash (red/yellow/green/cyan, 480ms each, 6 cycles ~11.5s) | White |
 
 The full-screen background color provides an unmistakable visual signal of the current phase — visible from across the gym.
 
@@ -66,6 +66,28 @@ Horizontal swipe on the active screen:
 Implemented via `onpointerdown`/`onpointerup` handlers that track start position and compute delta on release. Critical CSS/JS for reliable mobile swipes:
 - `touch-action: none` on `.active-screen` prevents the browser from intercepting swipes (e.g. Safari back/forward navigation)
 - `setPointerCapture()` on pointer down ensures `pointerup` fires even if the finger drifts outside the element
+
+### Desktop — Keyboard Shortcuts
+
+On hover-capable devices, the following keyboard shortcuts are available:
+
+| Key       | Action                                    |
+|-----------|-------------------------------------------|
+| `Space`   | Play / Pause / Resume                     |
+| `←`       | Previous segment (skip backward)          |
+| `→`       | Next segment (skip forward)               |
+| `F`       | Toggle fullscreen (works on any screen)   |
+| `Esc`     | Close overlay / Go home when finished     |
+| `?`       | Toggle keyboard shortcuts help modal      |
+
+**Escape behavior by context:**
+- Shortcuts modal open → closes modal
+- Presets list open → closes list
+- Picker open → cancels picker (reverts value)
+- Timer finished → returns to home screen
+- Timer running/paused → does nothing (except browser's native fullscreen exit)
+
+The `?` key opens a modal overlay listing all available shortcuts. It works from any screen (home, active timer, picker, presets). The modal is implemented as a `KeyboardShortcuts` component (`src/lib/components/KeyboardShortcuts.svelte`).
 
 ### Desktop — Arrow Buttons
 

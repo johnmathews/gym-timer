@@ -23,6 +23,7 @@
  import VolumeControl from "$lib/components/VolumeControl.svelte";
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
  import PresetList from "$lib/components/PresetList.svelte";
+ import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
  import { PRESETS } from "$lib/presets";
 
  const timer = createTimer();
@@ -39,6 +40,7 @@
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
  let showPresets = $state(false);
+ let showShortcuts = $state(false);
 
  // Wake lock: always-on when timer is active
  let wakeLock: WakeLockSentinel | null = null;
@@ -268,7 +270,87 @@
  const workValues = generateTimeValues(5, 600);
  const restValues = generateTimeValues(0, 300);
  const repeatValues = Array.from({ length: 10 }, (_, i) => i + 1);
+
+ // Desktop keyboard shortcuts
+ function handleKeydown(e: KeyboardEvent) {
+  if ((e.target as HTMLElement).closest("input, textarea, select")) return;
+
+  // ? toggles keyboard shortcuts help
+  if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
+   e.preventDefault();
+   showShortcuts = !showShortcuts;
+   return;
+  }
+
+  // F for fullscreen works everywhere
+  if (e.key === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+   e.preventDefault();
+   const el = document.documentElement as any;
+   if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+   } else {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+   }
+   return;
+  }
+
+  // Escape: close shortcuts modal, then picker/presets, then reset if finished
+  if (e.key === "Escape" && !document.fullscreenElement) {
+   if (showShortcuts) {
+    e.preventDefault();
+    showShortcuts = false;
+    return;
+   }
+   if (showPresets) {
+    e.preventDefault();
+    showPresets = false;
+    return;
+   }
+   if (activePicker) {
+    e.preventDefault();
+    cancelPicker();
+    return;
+   }
+   if (isFinished) {
+    e.preventDefault();
+    handleReset();
+    return;
+   }
+  }
+
+  // Timer controls only apply when not in picker/presets
+  if (activePicker || showPresets) return;
+
+  if (e.key === " " && $status === "idle" && canStart) {
+   e.preventDefault();
+   handleStart();
+  } else if (e.key === " " && (isRunning || isPaused)) {
+   e.preventDefault();
+   resumeAudioContext();
+   if (isRunning) {
+    log("ui:pause");
+    playPauseSound();
+    timer.pause();
+   } else {
+    log("ui:resume");
+    playResumeSound();
+    timer.start();
+   }
+  } else if (e.key === "ArrowLeft" && isActive) {
+   e.preventDefault();
+   resumeAudioContext();
+   timer.skipBackward();
+  } else if (e.key === "ArrowRight" && isActive) {
+   e.preventDefault();
+   resumeAudioContext();
+   timer.skipForward();
+  }
+ }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
  <title>Timer</title>
@@ -429,6 +511,7 @@
    </div>
   </div>
  {/if}
+ <KeyboardShortcuts open={showShortcuts} onclose={() => (showShortcuts = false)} />
 </main>
 
 <style>
@@ -519,7 +602,7 @@
  }
 
  .app.finished {
-  animation: finished-flash 3s step-end 4;
+  animation: finished-flash 1.92s step-end 6;
   background-color: #000;
  }
 
@@ -668,19 +751,16 @@
 
  @keyframes finished-flash {
   0% {
-   background-color: #ff1744; /* red */
+   background-color: #FF5252; /* red */
   }
-  20% {
+  25% {
    background-color: #ffea00; /* yellow */
   }
-  40% {
+  50% {
    background-color: #00e676; /* green */
   }
-  60% {
+  75% {
    background-color: #00bcd4; /* cyan */
-  }
-  80% {
-   background-color: #ff4081; /* pink */
   }
  }
 

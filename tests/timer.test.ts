@@ -966,3 +966,194 @@ test.describe("Countdown dings", () => {
     await expect(page.getByTestId("phase-label")).toHaveText("Work");
   });
 });
+
+test.describe("Keyboard shortcuts", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await page.goto("/");
+  });
+
+  test("Space pauses a running timer", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.locator(".app")).toHaveClass(/getReady/);
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+  });
+
+  test("Space resumes a paused timer", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("ArrowRight skips forward", async ({ page }) => {
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-2").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+  });
+
+  test("ArrowLeft skips backward", async ({ page }) => {
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-2").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    // Advance past getReady into work
+    await page.clock.fastForward(11000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+  });
+
+  test("Escape does nothing while timer is running", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    // Should still be on the active screen, not reset
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+  });
+
+  test("Escape does nothing while timer is paused", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("Escape");
+    // Should still be paused, not reset
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+  });
+
+  test("Escape returns to home screen when finished", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-1").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await page.clock.fastForward(16000);
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("Space starts timer from idle screen", async ({ page }) => {
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+
+    await page.keyboard.press("Space");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("Escape closes picker and returns to home screen", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("ruler-picker")).not.toBeVisible();
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("Escape closes presets list", async ({ page }) => {
+    await page.getByTestId("presets-button").click();
+    await expect(page.getByTestId("preset-list")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-list")).not.toBeVisible();
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("Space and arrows are ignored when picker is open", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowRight");
+    // Picker should still be open, nothing crashed
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+  });
+
+  test("? opens keyboard shortcuts modal", async ({ page }) => {
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+    await expect(page.getByText("Pause / Resume")).toBeVisible();
+  });
+
+  test("? toggles shortcuts modal closed", async ({ page }) => {
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+  });
+
+  test("Escape closes shortcuts modal", async ({ page }) => {
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+  });
+
+  test("Close button closes shortcuts modal", async ({ page }) => {
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+  });
+
+  test("? works during active timer", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+  });
+
+  test("clicking overlay backdrop closes shortcuts modal", async ({ page }) => {
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+    // Click on the overlay outside the modal
+    await page.locator(".overlay").click({ position: { x: 10, y: 10 } });
+    await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+  });
+
+  test("Space does nothing when finished", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-1").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await page.clock.fastForward(16000);
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+
+    // Space should not restart or change state
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+  });
+
+  test("arrows do nothing on idle screen", async ({ page }) => {
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("Escape does nothing on idle screen with no overlay", async ({ page }) => {
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+});
