@@ -1,16 +1,23 @@
 <script lang="ts">
-  import type { TimerPhase } from "$lib/timer";
+  import type { TimerPhase, TimerStatus } from "$lib/timer";
 
   interface Props {
     phase: TimerPhase;
     currentRep: number;
     totalReps: number;
+    status: TimerStatus;
   }
 
-  let { phase, currentRep, totalReps }: Props = $props();
+  let { phase, currentRep, totalReps, status }: Props = $props();
 
   const phaseLabel = $derived(
-    phase === "getReady" ? "Get Ready!" : phase === "work" ? "Work" : "Rest"
+    status === "finished"
+      ? "Well Done!"
+      : phase === "getReady"
+        ? "Get Ready!"
+        : phase === "work"
+          ? "Work"
+          : "Rest"
   );
   const showReps = $derived(totalReps > 1);
 </script>

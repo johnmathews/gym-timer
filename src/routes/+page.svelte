@@ -441,7 +441,7 @@
     <FullscreenButton />
     <VolumeControl />
    </div>
-   <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} />
+   <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} status={$status} />
 
    <div class="countdown-area">
     {#if !isFinished}

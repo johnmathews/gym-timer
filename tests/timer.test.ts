@@ -448,6 +448,24 @@ test.describe("Timer", () => {
     await expect(page.getByTestId("resume-button")).not.toBeVisible();
   });
 
+  test("finished state shows Well Done! label and progress bar", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+
+    // Set reps to 3 so progress bar is visible
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-3").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    // getReady (10s) + 3 work segments (5s each) = 25s
+    await page.clock.fastForward(26000);
+
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+    await expect(page.getByTestId("phase-label")).toHaveText("Well Done!");
+    await expect(page.getByTestId("progress-bar")).toBeVisible();
+    await expect(page.getByTestId("rep-counter")).toBeVisible();
+  });
+
   test("progress bar has correct number of segments", async ({ page }) => {
     // Set reps to 3
     await page.getByTestId("config-card-repeat").click();
