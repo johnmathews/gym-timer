@@ -21,7 +21,7 @@ The layout is a vertical flex column with three sections:
 | Work          | `#2ECC71` (green)  | Black   |
 | Rest          | `#FFBA08` (yellow) | Black   |
 | Paused        | `#000` (black)  | Amber (phase header), white (timer) |
-| Finished      | 4-color flash (red/yellow/green/cyan, 480ms each, 6 cycles ~11.5s), phase label shows "Well Done!" | White |
+| Finished      | 4-color flash (red/yellow/green/cyan, ~288ms each, 10 cycles ~11.5s), ends on cyan `#00bcd4`, phase label shows "Well Done!" | White |
 
 The full-screen background color provides an unmistakable visual signal of the current phase — visible from across the gym.
 
@@ -76,6 +76,8 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `Space`   | Play / Pause / Resume                     |
 | `←`       | Previous segment (skip backward)          |
 | `→`       | Next segment (skip forward)               |
+| `↑`       | Add a rep (live edit)                     |
+| `↓`       | Remove a rep (live edit)                  |
 | `F`       | Toggle fullscreen (works on any screen)   |
 | `Esc`     | Close overlay / Go home when finished     |
 | `?`       | Toggle keyboard shortcuts help modal      |
@@ -112,7 +114,10 @@ When the timer is paused, the PhaseHeader remains visible at the top showing the
 ## Progress Bar
 
 During active timer, a segmented progress bar shows:
-- One segment per phase (getReady + work/rest pairs)
-- Current segment fills proportionally based on time remaining
-- Completed segments are fully filled
+- One segment per rep
+- Completed segments are dark (`rgba(0,0,0,0.7)`)
+- Current segment is grey (`rgba(0,0,0,0.4)`) to distinguish from completed
+- Future segments are light (`rgba(0,0,0,0.15)`)
+- When paused: completed = amber, current = semi-transparent amber, future = dim white
+- When finished: all segments show as completed (dark)
 - Phase label and rep counter displayed above

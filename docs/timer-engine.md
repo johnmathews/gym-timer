@@ -79,6 +79,8 @@ A `visibilitychange` listener triggers `syncState()` immediately when the page b
 | `destroy()`         | Clean up interval and event listeners            |
 | `skipForward()`     | Jump to start of next segment (or finish if last)|
 | `skipBackward()`    | Restart current segment (>2s in) or go to previous|
+| `addRep()`          | Append a rep to the end of the running workout   |
+| `removeRep()`       | Remove the last rep (only if not yet reached)    |
 
 ## Skip/Rewind
 
@@ -104,6 +106,8 @@ A `visibilitychange` listener triggers `syncState()` immediately when the page b
 4. If first segment → restart it (seek to 0)
 
 **Get-ready insertion**: When skipBackward lands on a **work** segment, a `getReady` countdown is dynamically inserted before it in the timeline (unless one already precedes it). This gives the user a 10-second preparation period before work resumes. The `insertGetReady(beforeIdx)` helper splices the segment into the timeline and recalculates all subsequent `startOffset` values. Repeated skips to the same work segment reuse the existing getReady rather than inserting duplicates.
+
+**Stale getReady cleanup**: After inserting (or seeking to) a getReady, skipBackward removes any other dynamically-inserted getReady segments further ahead in the timeline. The original timeline only has a getReady at index 0, so any getReady at index > 0 beyond the current position is a leftover from a previous skip and would cause unwanted countdowns when the timer runs forward. This ensures that multiple consecutive skipBackward calls result in only one getReady — at the final landing point.
 
 ## Constants
 

@@ -7,7 +7,7 @@ Built with SvelteKit as a static site, designed for touch interfaces and optimiz
 
 ## Setup
 
-Requires Node.js 20+.
+Requires Node.js 22+.
 
 ```sh
 npm install

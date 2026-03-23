@@ -261,7 +261,7 @@
   while (v <= max) {
    result.push(v);
    if (v < 60) v += 5;
-   else if (v < 180) v += 15;
+   else if (v < 300) v += 10;
    else v += 30;
   }
   return result;
@@ -269,7 +269,7 @@
 
  const workValues = generateTimeValues(5, 600);
  const restValues = generateTimeValues(0, 300);
- const repeatValues = Array.from({ length: 10 }, (_, i) => i + 1);
+ const repeatValues = Array.from({ length: 20 }, (_, i) => i + 1);
 
  // Desktop keyboard shortcuts
  function handleKeydown(e: KeyboardEvent) {
@@ -346,6 +346,14 @@
    e.preventDefault();
    resumeAudioContext();
    timer.skipForward();
+  } else if (e.key === "ArrowUp" && isActive) {
+   e.preventDefault();
+   timer.addRep();
+   reps = $totalReps;
+  } else if (e.key === "ArrowDown" && isActive) {
+   e.preventDefault();
+   timer.removeRep();
+   reps = $totalReps;
   }
  }
 </script>
@@ -602,8 +610,8 @@
  }
 
  .app.finished {
-  animation: finished-flash 1.92s step-end 6;
-  background-color: #000;
+  animation: finished-flash 1.152s step-end 10;
+  background-color: #00bcd4;
  }
 
  .app.finished :global(.time),
@@ -719,8 +727,12 @@
   background: rgba(255, 255, 255, 0.15);
  }
 
- .app.paused :global(.segment.active) {
+ .app.paused :global(.segment.done) {
   background: #ffba08;
+ }
+
+ .app.paused :global(.segment.current) {
+  background: rgba(255, 186, 8, 0.5);
  }
 
  .icon-btn {

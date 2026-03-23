@@ -34,7 +34,8 @@
       {#each Array(totalReps) as _, i}
         <div
           class="segment"
-          class:active={i < currentRep}
+          class:done={i < currentRep - 1 || (i < currentRep && status === "finished")}
+          class:current={i === currentRep - 1 && status !== "finished"}
         ></div>
       {/each}
     </div>
@@ -80,8 +81,12 @@
     background: rgba(0, 0, 0, 0.15);
   }
 
-  .segment.active {
+  .segment.done {
     background: rgba(0, 0, 0, 0.7);
+  }
+
+  .segment.current {
+    background: rgba(0, 0, 0, 0.4);
   }
 
   @media (min-width: 768px) {

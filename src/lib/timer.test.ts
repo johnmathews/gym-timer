@@ -745,7 +745,7 @@ describe("skipForward and skipBackward", () => {
   });
 
   // Timeline for configure(5, 3, 2):
-  //   getReady: offset 0, duration 5
+  //   getReady: offset 0, duration 10
   //   work1:    offset 5, duration 5
   //   rest1:    offset 10, duration 3
   //   work2:    offset 13, duration 5
@@ -1228,6 +1228,217 @@ describe("skipForward and skipBackward", () => {
     // Complete work3 → finished
     vi.advanceTimersByTime(5000);
     expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("multiple skipBackward cleans up stale getReady segments", () => {
+    // Timeline: getReady(10) + work1(5) + rest1(3) + work2(5) + rest2(3) + work3(5)
+    const timer = createTimer();
+    timer.configure(5, 3, 3);
+    timer.start();
+
+    // Advance to 3s into work3 (10 + 5 + 3 + 5 + 3 + 3 = 29s)
+    vi.advanceTimersByTime(29000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    // Skip back from work3 — inserts getReady before work3
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Immediately skip back again (<=2s into getReady) — goes to rest2
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("rest");
+    expect(get(timer.currentRep)).toBe(2);
+
+    // Skip back again (<=2s into rest2) — goes to work2, inserts getReady
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Now let the timer run forward: getReady → work2 → rest2 → work3 (NO extra getReady before work3)
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    vi.advanceTimersByTime(5000); // work2 done
+    expect(get(timer.phase)).toBe("rest");
+
+    vi.advanceTimersByTime(3000); // rest2 done
+    // Should go directly to work3, NOT to a getReady
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    vi.advanceTimersByTime(5000); // work3 done
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("multiple skipBackward with rest=0 cleans up stale getReady segments", () => {
+    // Timeline: getReady(10) + work1(5) + work2(5) + work3(5)
+    const timer = createTimer();
+    timer.configure(5, 0, 3);
+    timer.start();
+
+    // Advance to 3s into work3 (10 + 5 + 5 + 3 = 23s)
+    vi.advanceTimersByTime(23000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    // Skip back from work3 — inserts getReady before work3
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Skip back (<=2s) — goes to work2, inserts getReady before work2
+    // and should clean up the getReady before work3
+    timer.skipBackward();
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Run forward: getReady → work2 → work3 (no extra getReady)
+    vi.advanceTimersByTime(GET_READY_DURATION * 1000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(2);
+
+    vi.advanceTimersByTime(5000);
+    // Should go directly to work3, NOT to a getReady
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(3);
+
+    vi.advanceTimersByTime(5000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("skipBackward 3 times then complete — correct total duration", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 4);
+    timer.start();
+
+    // Advance to 3s into work4 (10 + 5+3 + 5+3 + 5+3 + 3 = 37s)
+    vi.advanceTimersByTime(37000);
+    expect(get(timer.phase)).toBe("work");
+    expect(get(timer.currentRep)).toBe(4);
+
+    // Skip back 3 times rapidly
+    timer.skipBackward(); // inserts getReady before work4
+    timer.skipBackward(); // <=2s, goes to rest3
+    timer.skipBackward(); // <=2s, goes to work3, inserts getReady, cleans up work4's getReady
+
+    expect(get(timer.phase)).toBe("getReady");
+
+    // Run forward: getReady(10) + work3(5) + rest3(3) + work4(5) = 23s to finish
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 5) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+});
+
+describe("addRep and removeRep", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("addRep appends a work segment to the timeline", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance into work1
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    expect(get(timer.totalReps)).toBe(2);
+
+    timer.addRep();
+    expect(get(timer.totalReps)).toBe(3);
+
+    // Let the timer run to completion: remaining work1(3) + rest1(3) + work2(5) + rest2(3) + work3(5) = 19s
+    vi.advanceTimersByTime(19000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("addRep with rest=0 appends work without rest", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 2);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    timer.addRep();
+    expect(get(timer.totalReps)).toBe(3);
+
+    // remaining work1(3) + work2(5) + work3(5) = 13s
+    vi.advanceTimersByTime(13000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("removeRep removes the last segment from the timeline", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 3);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    expect(get(timer.totalReps)).toBe(3);
+
+    timer.removeRep();
+    expect(get(timer.totalReps)).toBe(2);
+
+    // remaining work1(3) + rest1(3) + work2(5) = 11s
+    vi.advanceTimersByTime(11000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("removeRep does not remove the current or past reps", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.start();
+
+    // Advance to work2 — both reps in use, can't remove
+    vi.advanceTimersByTime((GET_READY_DURATION + 5 + 3 + 2) * 1000);
+    expect(get(timer.currentRep)).toBe(2);
+
+    timer.removeRep();
+    expect(get(timer.totalReps)).toBe(2); // unchanged
+
+    timer.destroy();
+  });
+
+  it("removeRep does not go below 1 rep", () => {
+    const timer = createTimer();
+    timer.configure(5, 0, 1);
+    timer.start();
+
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    timer.removeRep();
+    expect(get(timer.totalReps)).toBe(1); // unchanged
+
+    timer.destroy();
+  });
+
+  it("addRep is a no-op when idle", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.addRep();
+    expect(get(timer.totalReps)).toBe(2);
+
+    timer.destroy();
+  });
+
+  it("removeRep is a no-op when idle", () => {
+    const timer = createTimer();
+    timer.configure(5, 3, 2);
+    timer.removeRep();
+    expect(get(timer.totalReps)).toBe(2);
 
     timer.destroy();
   });

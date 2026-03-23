@@ -11,14 +11,14 @@ Time pickers use non-uniform increments to provide fine control at short duratio
 | Range       | Step Size | Rationale                              |
 |-------------|-----------|----------------------------------------|
 | 0–60s       | 5s        | Fine-grained for short intervals       |
-| 60s–3min    | 15s       | Quarter-minute precision               |
-| 3min–10min  | 30s       | Half-minute steps for longer durations |
+| 60s–5min    | 10s       | Fine control through mid-range         |
+| 5min–10min  | 30s       | Half-minute steps for longer durations |
 
 ### Value Ranges
 
 - **Work**: 5s to 10min (5s minimum ensures a meaningful interval)
 - **Rest**: 0s to 5min (0 = no rest between reps; lower cap since rest is typically shorter)
-- **Repeats**: 1 to 10 (uniform integer scale)
+- **Repeats**: 1 to 20 (uniform integer scale)
 
 ### Scale Generation
 
@@ -31,7 +31,7 @@ function generateTimeValues(min: number, max: number): number[] {
   while (v <= max) {
     result.push(v);
     if (v < 60) v += 5;
-    else if (v < 180) v += 15;
+    else if (v < 300) v += 10;
     else v += 30;
   }
   return result;

@@ -350,7 +350,80 @@ export function createTimer() {
       targetIdx = targetIdx - 1;
     }
 
+    // Clean up stale dynamically-inserted getReady segments ahead of the current
+    // position. The original timeline only has getReady at index 0; any other
+    // getReady further ahead was inserted by a previous skipBackward and should
+    // be removed so the timer doesn't play extra countdowns when running forward.
+    for (let i = _timeline.length - 1; i > targetIdx; i--) {
+      if (_timeline[i].phase === "getReady" && i !== 0) {
+        _timeline.splice(i, 1);
+      }
+    }
+    // Recalculate startOffsets after removals
+    for (let i = 1; i < _timeline.length; i++) {
+      _timeline[i].startOffset = _timeline[i - 1].startOffset + _timeline[i - 1].duration;
+    }
+
     seekTo(_timeline[targetIdx].startOffset * 1000);
+  }
+
+  /** Add a rep to the end of the current workout without losing progress. */
+  function addRep(): void {
+    const currentStatus = getStore(status);
+    if (currentStatus !== "running" && currentStatus !== "paused") return;
+    if (_timeline.length === 0) return;
+
+    _totalReps++;
+    totalReps.set(_totalReps);
+
+    // Find the last segment to append after it
+    const lastSeg = _timeline[_timeline.length - 1];
+
+    // If the last rep had no rest after it (rest=0 or it was the final rep),
+    // we may need to insert a rest before the new work segment
+    if (_restDuration > 0 && lastSeg.phase === "work") {
+      const restOffset = lastSeg.startOffset + lastSeg.duration;
+      _timeline.push({
+        phase: "rest",
+        rep: lastSeg.rep,
+        duration: _restDuration,
+        startOffset: restOffset,
+      });
+    }
+
+    const prev = _timeline[_timeline.length - 1];
+    const workOffset = prev.startOffset + prev.duration;
+    _timeline.push({
+      phase: "work",
+      rep: _totalReps,
+      duration: _workDuration,
+      startOffset: workOffset,
+    });
+  }
+
+  /** Remove the last rep from the current workout. Cannot remove the current or past reps. */
+  function removeRep(): void {
+    const currentStatus = getStore(status);
+    if (currentStatus !== "running" && currentStatus !== "paused") return;
+    if (_timeline.length === 0) return;
+    if (_totalReps <= 1) return;
+
+    const curRep = getStore(currentRep);
+    // Don't remove reps that are in progress or already completed
+    if (_totalReps <= curRep) return;
+
+    _totalReps--;
+    totalReps.set(_totalReps);
+
+    // Remove segments from the end: the last work segment, and preceding rest if any
+    const lastSeg = _timeline[_timeline.length - 1];
+    if (lastSeg.phase === "work") {
+      _timeline.pop();
+      // Also remove the preceding rest if it exists
+      if (_timeline.length > 0 && _timeline[_timeline.length - 1].phase === "rest") {
+        _timeline.pop();
+      }
+    }
   }
 
   return {
@@ -369,6 +442,8 @@ export function createTimer() {
     destroy,
     skipForward,
     skipBackward,
+    addRep,
+    removeRep,
   };
 }
 

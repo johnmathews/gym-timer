@@ -21,6 +21,14 @@
           <span>Next segment</span>
         </div>
         <div class="row">
+          <kbd>&uarr;</kbd>
+          <span>Add a rep</span>
+        </div>
+        <div class="row">
+          <kbd>&darr;</kbd>
+          <span>Remove a rep</span>
+        </div>
+        <div class="row">
           <kbd>F</kbd>
           <span>Toggle fullscreen</span>
         </div>
