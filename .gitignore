@@ -26,5 +26,8 @@ vite.config.ts.timestamp-*
 /test-results/
 /playwright-report/
 
+# Coverage
+/coverage/
+
 # Claude
 .claude/
