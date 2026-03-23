@@ -96,7 +96,7 @@
   </div>
 
   <!-- Tick marks (uniformly spaced, always visible below fill) -->
-  {#each values as tickVal, i}
+  {#each values as tickVal, i (tickVal)}
    {@const pct = tickPercent(i)}
    {@const isLabel = isLabelTick(tickVal)}
    <div class="tick" class:tick-label={isLabel} style:top="{pct}%" data-testid="ruler-tick-{tickVal}">

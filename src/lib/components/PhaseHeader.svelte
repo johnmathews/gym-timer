@@ -31,7 +31,7 @@
   </div>
   {#if showReps}
     <div class="progress-bar" data-testid="progress-bar">
-      {#each Array(totalReps) as _, i}
+      {#each Array(totalReps) as _, i (i)}
         <div
           class="segment"
           class:done={i < currentRep - 1 || (i < currentRep && status === "finished")}

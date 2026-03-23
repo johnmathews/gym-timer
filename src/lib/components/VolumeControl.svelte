@@ -23,7 +23,7 @@
       if (window.matchMedia("(hover: hover)").matches) {
         maxVolume = DESKTOP_MAX_VOLUME;
       }
-    } catch {}
+    } catch { /* matchMedia not available */ }
     initVolume();
     sliderValue = volumeToSlider(getMasterVolume());
 

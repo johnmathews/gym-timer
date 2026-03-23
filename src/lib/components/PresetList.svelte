@@ -23,7 +23,7 @@
   </div>
 
   <div class="list">
-   {#each presets as preset}
+   {#each presets as preset (preset.name)}
     <button
      class="preset-btn"
      data-testid="preset-{preset.name.toLowerCase().replace(/[\s/]/g, '-')}"

@@ -1,4 +1,4 @@
-import { writable, derived, type Readable } from "svelte/store";
+import { writable, type Readable } from "svelte/store";
 import { log } from "./logger";
 
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
