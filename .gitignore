@@ -31,3 +31,6 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude/
+
+/ui examples/
+/ui feedback/
