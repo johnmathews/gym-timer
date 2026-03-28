@@ -181,7 +181,22 @@ test.describe("Timer", () => {
     const app = page.locator(".app");
     const box = await app.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeLessThanOrEqual(640);
+    // Wide desktop (≥1024px) uses 960px max-width with 2-column grid
+    expect(box!.width).toBeLessThanOrEqual(960);
+  });
+
+  test("desktop wide layout uses two-column grid", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+
+    const cards = page.locator(".cards");
+    const time = page.getByTestId("total-time");
+    const cardsBox = await cards.boundingBox();
+    const timeBox = await time.boundingBox();
+    expect(cardsBox).not.toBeNull();
+    expect(timeBox).not.toBeNull();
+    // Cards and time should be side by side (time to the right of cards)
+    expect(timeBox!.x).toBeGreaterThan(cardsBox!.x + cardsBox!.width - 10);
   });
 
   test("phase header with rep counter shown during multi-rep workout", async ({
