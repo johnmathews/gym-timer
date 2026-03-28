@@ -776,6 +776,49 @@
   }
  }
 
+ /* Desktop wide screens — 2-column home layout */
+ @media (min-width: 1024px) {
+  .app {
+   max-width: 960px;
+  }
+
+  .home {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   grid-template-rows: auto 1fr;
+   gap: 0 40px;
+  }
+
+  .home .toolbar {
+   grid-column: 1 / -1;
+   grid-row: 1;
+   align-self: start;
+  }
+
+  .home .cards {
+   grid-column: 1;
+   grid-row: 2;
+   align-self: center;
+  }
+
+  .home :global(.total-time-display) {
+   grid-column: 2;
+   grid-row: 2;
+   align-self: center;
+   padding: 0;
+  }
+
+  .home :global(.total-time-display .row) {
+   justify-content: center;
+   gap: 30px;
+  }
+
+  .home :global(.total-time-display .time) {
+   flex: 0;
+   font-size: min(20vw, 12rem);
+  }
+ }
+
  /* Landscape layout for small screens (iPhones) — homescreen only */
  @media (orientation: landscape) and (max-height: 500px) {
   .app {

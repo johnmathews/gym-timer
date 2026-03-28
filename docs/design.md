@@ -2,15 +2,24 @@
 
 ## Layout
 
-The app uses a single-page layout centered on screen with a maximum width constraint:
+The app uses a single-page layout centered on screen with responsive width constraints:
 
-- **Mobile**: max-width 500px
-- **Desktop** (≥768px viewport): max-width 640px
+- **Mobile** (<768px): max-width 500px, single-column vertical layout
+- **Desktop** (768px–1023px): max-width 640px, single-column vertical layout
+- **Desktop wide** (≥1024px): max-width 960px, **2-column grid** — config cards on the left, total time + play button on the right
+- **Phone landscape** (<500px height): full-width 2-column grid with compressed card sizes
 
-The layout is a vertical flex column with three sections:
+On narrow screens, the layout is a vertical flex column with three sections:
 1. **Config area** (idle) or **Phase header** (active) — top
 2. **Countdown display** — center, fills available space
 3. **Toolbar** — bottom, with action buttons
+
+On wide desktop screens (≥1024px), the idle/home screen switches to a 2-column CSS grid:
+- **Left column**: Three config cards (Work, Rest, Repeat) stacked vertically
+- **Right column**: Total time display and play button, vertically centered
+- **Toolbar row**: Spans both columns at the top (fullscreen, presets, volume)
+
+This reuses the same grid pattern as the phone landscape layout but with larger fonts and more generous spacing (40px column gap vs 24px).
 
 ## Color Scheme
 
@@ -34,11 +43,22 @@ The full-screen background color provides an unmistakable visual signal of the c
 
 ## Responsive Breakpoints
 
-Desktop breakpoint: `@media (min-width: 768px)` is used for:
+Three responsive breakpoints:
+
+**`@media (min-width: 768px)`** — tablet/desktop baseline:
 - Wider app container (500px → 640px)
 - Larger countdown font
 - Chunkier progress bar segments (8px → 12px height, 4px → 6px radius)
 - Larger phase labels (1.75rem → 2rem)
+
+**`@media (min-width: 1024px)`** — wide desktop:
+- App container widens to 960px
+- Home screen switches from single column to 2-column grid
+- Total time font: `min(20vw, 12rem)`
+
+**`@media (orientation: landscape) and (max-height: 500px)`** — phone landscape:
+- Full-width (no max-width), compressed config cards (78px height)
+- 2-column grid with reduced font sizes and tighter spacing
 
 ## Buttons & Icons
 
