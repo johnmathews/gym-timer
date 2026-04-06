@@ -136,8 +136,8 @@ When the timer is paused, the PhaseHeader remains visible at the top showing the
 During active timer, a segmented progress bar shows:
 - One segment per rep
 - Completed segments are dark (`rgba(0,0,0,0.7)`)
-- Current segment is grey (`rgba(0,0,0,0.4)`) to distinguish from completed
+- Current segment has diagonal stripes (`repeating-linear-gradient` at -45deg, 3px black stripes with 3px transparent gaps) — easily distinguishable from completed and future segments during a workout
 - Future segments are light (`rgba(0,0,0,0.15)`)
-- When paused: completed = amber, current = semi-transparent amber, future = dim white
+- When paused: completed = amber, current = diagonal amber stripes (same pattern, `#ffba08` on transparent), future = dim white
 - When finished: all segments show as completed (dark)
 - Phase label and rep counter displayed above

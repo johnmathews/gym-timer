@@ -496,6 +496,45 @@ test.describe("Timer", () => {
     await expect(segments).toHaveCount(3);
   });
 
+  test("current segment has diagonal stripe pattern", async ({ page }) => {
+    // Set reps to 3
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-3").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+
+    // Fast-forward past getReady into work phase
+    await page.clock.fastForward(11000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    const currentSegment = page.locator('[data-testid="progress-bar"] .segment.current');
+    const bg = await currentSegment.evaluate(
+      (el) => getComputedStyle(el).backgroundImage
+    );
+    expect(bg).toContain("repeating-linear-gradient");
+  });
+
+  test("current segment stripe pattern persists when paused", async ({ page }) => {
+    // Set reps to 3
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-3").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+
+    // Fast-forward past getReady into work phase
+    await page.clock.fastForward(11000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    // Pause
+    await page.getByTestId("active-screen").click();
+
+    const currentSegment = page.locator('[data-testid="progress-bar"] .segment.current');
+    const bg = await currentSegment.evaluate(
+      (el) => getComputedStyle(el).backgroundImage
+    );
+    expect(bg).toContain("repeating-linear-gradient");
+  });
+
   test("getReady countdown shows correct initial time", async ({ page }) => {
     await page.getByTestId("play-button").click();
 

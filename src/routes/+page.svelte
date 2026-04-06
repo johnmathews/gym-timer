@@ -732,7 +732,13 @@
  }
 
  .app.paused :global(.segment.current) {
-  background: rgba(255, 186, 8, 0.5);
+  background: repeating-linear-gradient(
+   -45deg,
+   #ffba08,
+   #ffba08 3px,
+   transparent 3px,
+   transparent 6px
+  );
  }
 
  .icon-btn {

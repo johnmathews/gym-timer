@@ -86,7 +86,13 @@
   }
 
   .segment.current {
-    background: rgba(0, 0, 0, 0.4);
+    background: repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.7),
+      rgba(0, 0, 0, 0.7) 3px,
+      transparent 3px,
+      transparent 6px
+    );
   }
 
   @media (min-width: 768px) {
