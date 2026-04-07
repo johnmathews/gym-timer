@@ -732,12 +732,10 @@
  }
 
  .app.paused :global(.segment.current) {
-  background: repeating-linear-gradient(
-   -45deg,
-   #ffba08,
-   #ffba08 7px,
-   transparent 7px,
-   transparent 13px
+  background: linear-gradient(
+   to right,
+   #ffba08 50%,
+   rgba(255, 255, 255, 0.15) 50%
   );
  }
 

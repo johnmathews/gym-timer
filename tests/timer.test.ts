@@ -496,7 +496,7 @@ test.describe("Timer", () => {
     await expect(segments).toHaveCount(3);
   });
 
-  test("current segment has diagonal stripe pattern", async ({ page }) => {
+  test("current segment has half-filled pattern", async ({ page }) => {
     // Set reps to 3
     await page.getByTestId("config-card-repeat").click();
     await page.getByTestId("ruler-tick-3").click({ force: true });
@@ -511,10 +511,10 @@ test.describe("Timer", () => {
     const bg = await currentSegment.evaluate(
       (el) => getComputedStyle(el).backgroundImage
     );
-    expect(bg).toContain("repeating-linear-gradient");
+    expect(bg).toContain("linear-gradient");
   });
 
-  test("current segment stripe pattern persists when paused", async ({ page }) => {
+  test("current segment half-filled pattern persists when paused", async ({ page }) => {
     // Set reps to 3
     await page.getByTestId("config-card-repeat").click();
     await page.getByTestId("ruler-tick-3").click({ force: true });
@@ -532,7 +532,7 @@ test.describe("Timer", () => {
     const bg = await currentSegment.evaluate(
       (el) => getComputedStyle(el).backgroundImage
     );
-    expect(bg).toContain("repeating-linear-gradient");
+    expect(bg).toContain("linear-gradient");
   });
 
   test("getReady countdown shows correct initial time", async ({ page }) => {
