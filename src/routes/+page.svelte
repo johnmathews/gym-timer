@@ -735,9 +735,9 @@
   background: repeating-linear-gradient(
    -45deg,
    #ffba08,
-   #ffba08 3px,
-   transparent 3px,
-   transparent 6px
+   #ffba08 7px,
+   transparent 7px,
+   transparent 13px
   );
  }
 

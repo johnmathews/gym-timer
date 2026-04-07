@@ -88,10 +88,10 @@
   .segment.current {
     background: repeating-linear-gradient(
       -45deg,
-      rgba(0, 0, 0, 0.7),
-      rgba(0, 0, 0, 0.7) 3px,
-      transparent 3px,
-      transparent 6px
+      rgba(0, 0, 0, 0.85),
+      rgba(0, 0, 0, 0.85) 7px,
+      transparent 7px,
+      transparent 13px
     );
   }
 
