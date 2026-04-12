@@ -783,14 +783,17 @@
  /* Desktop wide screens — 2-column home layout */
  @media (min-width: 1024px) {
   .app {
-   max-width: 960px;
+   max-width: none;
+   padding: clamp(24px, 3vh, 48px) clamp(40px, 5vw, 80px);
+   padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 
   .home {
    display: grid;
    grid-template-columns: 1fr 1fr;
    grid-template-rows: auto 1fr;
-   gap: 0 40px;
+   gap: 0 clamp(40px, 5vw, 80px);
+   flex: 1;
   }
 
   .home .toolbar {
@@ -803,6 +806,21 @@
    grid-column: 1;
    grid-row: 2;
    align-self: center;
+   gap: clamp(12px, 2.5vh, 30px);
+  }
+
+  .home .cards :global(.config-card) {
+   height: clamp(90px, 15vh, 160px);
+   border-radius: 10px;
+   padding: 0 clamp(20px, 2vw, 40px);
+  }
+
+  .home .cards :global(.label) {
+   font-size: clamp(2rem, 2.5vw, 3.5rem);
+  }
+
+  .home .cards :global(.value) {
+   font-size: clamp(3.5rem, 4.5vw, 6rem);
   }
 
   .home :global(.total-time-display) {
@@ -814,12 +832,16 @@
 
   .home :global(.total-time-display .row) {
    justify-content: center;
-   gap: 30px;
+   gap: clamp(20px, 3vw, 50px);
+  }
+
+  .home :global(.total-time-display .play-btn) {
+   width: clamp(80px, 10vw, 160px);
   }
 
   .home :global(.total-time-display .time) {
    flex: 0;
-   font-size: min(20vw, 12rem);
+   font-size: clamp(8rem, 15vw, 18rem);
   }
  }
 

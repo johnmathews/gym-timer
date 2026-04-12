@@ -174,15 +174,15 @@ test.describe("Timer", () => {
     await expect(page.getByTestId("total-time")).toBeVisible();
   });
 
-  test("app is constrained to max-width on desktop", async ({ page }) => {
+  test("app fills full width on desktop homescreen", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/");
 
     const app = page.locator(".app");
     const box = await app.boundingBox();
     expect(box).not.toBeNull();
-    // Wide desktop (≥1024px) uses 960px max-width with 2-column grid
-    expect(box!.width).toBeLessThanOrEqual(960);
+    // Wide desktop (≥1024px) homescreen fills the viewport width
+    expect(box!.width).toBeGreaterThanOrEqual(1280 - 1);
   });
 
   test("desktop wide layout uses two-column grid", async ({ page }) => {

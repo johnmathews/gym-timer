@@ -6,7 +6,7 @@ The app uses a single-page layout centered on screen with responsive width const
 
 - **Mobile** (<768px): max-width 500px, single-column vertical layout
 - **Desktop** (768px–1023px): max-width 640px, single-column vertical layout
-- **Desktop wide** (≥1024px): max-width 960px, **2-column grid** — config cards on the left, total time + play button on the right
+- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** — config cards on the left, total time + play button on the right, all elements scale with viewport
 - **Phone landscape** (<500px height): full-width 2-column grid with compressed card sizes
 
 On narrow screens, the layout is a vertical flex column with three sections:
@@ -19,7 +19,7 @@ On wide desktop screens (≥1024px), the idle/home screen switches to a 2-column
 - **Right column**: Total time display and play button, vertically centered
 - **Toolbar row**: Spans both columns at the top (fullscreen, presets, volume)
 
-This reuses the same grid pattern as the phone landscape layout but with larger fonts and more generous spacing (40px column gap vs 24px).
+This reuses the same grid pattern as the phone landscape layout but with larger fonts and more generous spacing. All sizing uses `clamp()` to scale smoothly from 1024px to ultrawide displays.
 
 ## Color Scheme
 
@@ -52,9 +52,11 @@ Three responsive breakpoints:
 - Larger phase labels (1.75rem → 2rem)
 
 **`@media (min-width: 1024px)`** — wide desktop:
-- App container widens to 960px
+- App fills full viewport width with responsive padding (`clamp(40px, 5vw, 80px)`)
 - Home screen switches from single column to 2-column grid
-- Total time font: `min(20vw, 12rem)`
+- Config cards scale up: height `clamp(90px, 15vh, 160px)`, labels up to `3.5rem`, values up to `6rem`
+- Total time font: `clamp(8rem, 15vw, 18rem)`
+- Play button: `clamp(80px, 10vw, 160px)`
 
 **`@media (orientation: landscape) and (max-height: 500px)`** — phone landscape:
 - Full-width (no max-width), compressed config cards (78px height)
