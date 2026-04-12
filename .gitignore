@@ -34,3 +34,6 @@ vite.config.ts.timestamp-*
 
 /ui-examples/
 /ui-feedback/
+
+screenshots/
+.playwright-mcp/

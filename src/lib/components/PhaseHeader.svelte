@@ -1,111 +1,104 @@
 <script lang="ts">
-  import type { TimerPhase, TimerStatus } from "$lib/timer";
+ import type { TimerPhase, TimerStatus } from "$lib/timer";
 
-  interface Props {
-    phase: TimerPhase;
-    currentRep: number;
-    totalReps: number;
-    status: TimerStatus;
-  }
+ interface Props {
+  phase: TimerPhase;
+  currentRep: number;
+  totalReps: number;
+  status: TimerStatus;
+ }
 
-  let { phase, currentRep, totalReps, status }: Props = $props();
+ let { phase, currentRep, totalReps, status }: Props = $props();
 
-  const phaseLabel = $derived(
-    status === "finished"
-      ? "Well Done!"
-      : phase === "getReady"
-        ? "Get Ready!"
-        : phase === "work"
-          ? "Work"
-          : "Rest"
-  );
-  const showReps = $derived(totalReps > 1);
+ const phaseLabel = $derived(
+  status === "finished" ? "Well Done!" : phase === "getReady" ? "Get Ready!" : phase === "work" ? "Work" : "Rest",
+ );
+ const showReps = $derived(totalReps > 1);
 </script>
 
 <div class="phase-header" data-testid="phase-header">
-  <div class="label-row">
-    <span class="phase-label" data-testid="phase-label">{phaseLabel}</span>
-    {#if showReps}
-      <span class="rep-counter" data-testid="rep-counter">{currentRep}/{totalReps}</span>
-    {/if}
-  </div>
+ <div class="label-row">
+  <span class="phase-label" data-testid="phase-label">{phaseLabel}</span>
   {#if showReps}
-    <div class="progress-bar" data-testid="progress-bar">
-      {#each Array(totalReps) as _, i (i)}
-        <div
-          class="segment"
-          class:done={i < currentRep - 1 || (i < currentRep && status === "finished")}
-          class:current={i === currentRep - 1 && status !== "finished"}
-        ></div>
-      {/each}
-    </div>
+   <span class="rep-counter" data-testid="rep-counter">{currentRep}/{totalReps}</span>
   {/if}
+ </div>
+ {#if showReps}
+  <div class="progress-bar" data-testid="progress-bar">
+   {#each Array(totalReps) as _, i (i)}
+    <div
+     class="segment"
+     class:done={i < currentRep - 1 || (i < currentRep && status === "finished")}
+     class:current={i === currentRep - 1 && status !== "finished"}
+    ></div>
+   {/each}
+  </div>
+ {/if}
 </div>
 
 <style>
-  .phase-header {
-    width: 100%;
-    padding: 0 24px;
-    padding-top: max(16px, env(safe-area-inset-top));
-  }
+ .phase-header {
+  width: 100%;
+  padding: 0 24px;
+  padding-top: max(16px, env(safe-area-inset-top));
+ }
 
-  .label-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 10px;
+ .label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+ }
+
+ .phase-label {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+ }
+
+ .rep-counter {
+  font-size: 1.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, 0.85);
+ }
+
+ .progress-bar {
+  display: flex;
+  gap: 6px;
+ }
+
+ .segment {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+ }
+
+ .segment.done {
+  background: rgba(0, 0, 0, 0.7);
+ }
+
+ .segment.current {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.15) 50%);
+ }
+
+ @media (min-width: 768px) {
+  .rep-counter {
+   font-size: 2.6rem;
   }
 
   .phase-label {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: rgba(0, 0, 0, 0.85);
-  }
-
-  .rep-counter {
-    font-size: 1.75rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: rgba(0, 0, 0, 0.85);
+   font-size: 2rem;
   }
 
   .progress-bar {
-    display: flex;
-    gap: 6px;
+   gap: 8px;
   }
 
   .segment {
-    flex: 1;
-    height: 8px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.15);
+   height: 12px;
+   border-radius: 6px;
   }
-
-  .segment.done {
-    background: rgba(0, 0, 0, 0.7);
-  }
-
-  .segment.current {
-    background: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.7) 50%,
-      rgba(0, 0, 0, 0.15) 50%
-    );
-  }
-
-  @media (min-width: 768px) {
-    .phase-label,
-    .rep-counter {
-      font-size: 2rem;
-    }
-
-    .progress-bar {
-      gap: 8px;
-    }
-
-    .segment {
-      height: 12px;
-      border-radius: 6px;
-    }
-  }
+ }
 </style>
