@@ -54,11 +54,12 @@ Three responsive breakpoints:
 **`@media (min-width: 1024px)`** — wide desktop:
 - App fills full viewport width with responsive padding (`clamp(40px, 5vw, 80px)`)
 - Home screen switches from single column to 2-column grid
-- Config cards scale up: height `clamp(90px, 15vh, 160px)`, labels up to `3.5rem`, values up to `6rem`
-- Total time font: `clamp(8rem, 15vw, 18rem)`
-- Play button: `clamp(80px, 10vw, 160px)`
+- Config cards scale up: height `clamp(90px, 12vh, 160px)`, labels `clamp(2.5rem, 3.5vw, 4rem)` at weight 600, values up to `6rem`
+- Total time font: `clamp(10rem, 20vw, 24rem)`
+- Play button: `clamp(100px, 14vw, 200px)`
+- Toolbar icons: 36px (up from 28px on mobile)
 
-**`@media (orientation: landscape) and (max-height: 500px)`** — phone landscape:
+**`@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)`** — phone landscape:
 - Full-width (no max-width), compressed config cards (78px height)
 - 2-column grid with reduced font sizes and tighter spacing
 

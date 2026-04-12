@@ -60,4 +60,11 @@
   color: #000;
   margin-bottom: -5px;
  }
+
+ @media (min-width: 1024px) {
+  .label {
+   font-size: 2.5rem;
+   font-weight: 600;
+  }
+ }
 </style>

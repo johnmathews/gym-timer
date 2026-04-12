@@ -812,7 +812,8 @@
   }
 
   .home .cards :global(.label) {
-   font-size: clamp(2rem, 2.5vw, 3.5rem);
+   font-size: clamp(2.5rem, 3.5vw, 4rem);
+   font-weight: 600;
   }
 
   .home .cards :global(.value) {
@@ -832,12 +833,12 @@
   }
 
   .home :global(.total-time-display .play-btn) {
-   width: clamp(80px, 10vw, 160px);
+   width: clamp(100px, 14vw, 200px);
   }
 
   .home :global(.total-time-display .time) {
    flex: 0;
-   font-size: clamp(8rem, 15vw, 18rem);
+   font-size: clamp(10rem, 20vw, 24rem);
   }
 
   .toolbar :global(svg),
@@ -848,7 +849,7 @@
  }
 
  /* Landscape layout for small screens (iPhones) — homescreen only */
- @media (orientation: landscape) and (max-height: 500px) {
+ @media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
   .app {
    max-width: none;
    padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
