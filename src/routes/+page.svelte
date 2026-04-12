@@ -732,11 +732,7 @@
  }
 
  .app.paused :global(.segment.current) {
-  background: linear-gradient(
-   to right,
-   #ffba08 50%,
-   rgba(255, 255, 255, 0.15) 50%
-  );
+  background: linear-gradient(to right, #ffba08 50%, rgba(255, 255, 255, 0.15) 50%);
  }
 
  .icon-btn {
@@ -767,7 +763,7 @@
 
  @keyframes finished-flash {
   0% {
-   background-color: #FF5252; /* red */
+   background-color: #ff5252; /* red */
   }
   25% {
    background-color: #ffea00; /* yellow */
@@ -810,7 +806,7 @@
   }
 
   .home .cards :global(.config-card) {
-   height: clamp(90px, 15vh, 160px);
+   height: clamp(90px, 12vh, 160px);
    border-radius: 10px;
    padding: 0 clamp(20px, 2vw, 40px);
   }
@@ -842,6 +838,12 @@
   .home :global(.total-time-display .time) {
    flex: 0;
    font-size: clamp(8rem, 15vw, 18rem);
+  }
+
+  .toolbar :global(svg),
+  .active-toolbar :global(svg) {
+   width: 36px;
+   height: 36px;
   }
  }
 
