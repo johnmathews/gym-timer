@@ -29,6 +29,10 @@
           <span>Remove a rep</span>
         </div>
         <div class="row">
+          <kbd>R</kbd>
+          <span>Restart workout</span>
+        </div>
+        <div class="row">
           <kbd>F</kbd>
           <span>Toggle fullscreen</span>
         </div>

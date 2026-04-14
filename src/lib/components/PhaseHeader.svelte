@@ -51,7 +51,7 @@
  }
 
  .phase-label {
-  font-size: 1.75rem;
+  font-size: 1.95rem;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
  }
@@ -89,7 +89,7 @@
   }
 
   .phase-label {
-   font-size: 2rem;
+   font-size: 2.6rem;
   }
 
   .progress-bar {

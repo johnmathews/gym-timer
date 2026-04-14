@@ -1,8 +1,10 @@
-# Built-in Workout Presets
+# Built-in Workout Presets (Mothballed)
 
-## Overview
+## Status
 
-The app includes built-in workout presets that populate all three sliders (work, rest, repeats) with a single tap. Users can select a preset and then adjust values if needed before starting. EMOM is the default workout when the app opens.
+Presets are currently **mothballed** — the preset data and component files still exist in the codebase (`src/lib/presets.ts`, `src/lib/components/PresetList.svelte`) but are not imported or rendered in the UI. They may be brought back in a future iteration.
+
+The default workout is now EMOM10: 10 reps, 60s work, 0s rest (hardcoded in `+page.svelte`).
 
 ## Presets
 
@@ -28,14 +30,6 @@ All values are within slider ranges (work 5–600s, rest 0–300s, reps 1–10) 
 - Each preset shown as a button with name on the left and summary (`0:40 / 0:20 / x10`) on the right
 - Cancel button at the bottom closes the overlay without changes
 
-### Integration (`src/routes/+page.svelte`)
-
-- Presets button (hamburger/list icon) sits in the idle toolbar between Fullscreen and Volume
-- `showPresets` state controls overlay visibility
-- Selecting a preset sets `duration`, `rest`, `reps`, calls `timer.configure()`, and closes the overlay
-- The idle screen condition also checks `!showPresets` to hide config cards while the overlay is open
-
 ## Test Coverage
 
 - **Unit tests** (`src/lib/presets.test.ts`): validates all preset values are within slider ranges, on the 5s grid, unique names, non-empty
-- **E2e tests** (`tests/timer.test.ts`): button visibility, overlay open/close, preset selection populating sliders, total time update, starting timer after preset

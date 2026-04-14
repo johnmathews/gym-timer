@@ -22,16 +22,14 @@
  import PhaseHeader from "$lib/components/PhaseHeader.svelte";
  import VolumeControl from "$lib/components/VolumeControl.svelte";
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
- import PresetList from "$lib/components/PresetList.svelte";
  import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
- import { PRESETS } from "$lib/presets";
 
  const timer = createTimer();
  const { remaining, status, phase, currentRep, totalReps } = timer;
 
  let duration = $state(60);
  let rest = $state(0);
- let reps = $state(6);
+ let reps = $state(10);
  let prevStatus: string = "idle";
  let prevPhase: string = "work";
  let prevRep: number = 1;
@@ -39,7 +37,6 @@
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
- let showPresets = $state(false);
  let showShortcuts = $state(false);
 
  // Wake lock: always-on when timer is active
@@ -237,14 +234,6 @@
   activePicker = null;
  }
 
- function handlePresetSelect(preset: { work: number; rest: number; reps: number }) {
-  duration = preset.work;
-  rest = preset.rest;
-  reps = preset.reps;
-  timer.configure(duration, rest, reps);
-  showPresets = false;
- }
-
  function formatRulerTimeLabel(seconds: number): string {
   const m = Math.floor(seconds / 60);
   return `${m}:00`;
@@ -303,11 +292,6 @@
     showShortcuts = false;
     return;
    }
-   if (showPresets) {
-    e.preventDefault();
-    showPresets = false;
-    return;
-   }
    if (activePicker) {
     e.preventDefault();
     cancelPicker();
@@ -320,8 +304,16 @@
    }
   }
 
-  // Timer controls only apply when not in picker/presets
-  if (activePicker || showPresets) return;
+  // R to restart current workout (does nothing from home screen)
+  if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey && (isActive || isFinished)) {
+   e.preventDefault();
+   handleReset();
+   handleStart();
+   return;
+  }
+
+  // Timer controls only apply when not in picker
+  if (activePicker) return;
 
   if (e.key === " " && $status === "idle" && canStart) {
    e.preventDefault();
@@ -375,7 +367,7 @@
  class:rest={isRest}
  class:paused={isPaused}
 >
- {#if $status === "idle" && !activePicker && !showPresets}
+ {#if $status === "idle" && !activePicker}
   <!-- Idle: show config cards + total time -->
   <div class="home">
    <div class="cards">
@@ -387,21 +379,12 @@
    <div class="home-right">
     <div class="toolbar">
      <FullscreenButton />
-     <button class="icon-btn" data-testid="presets-button" onclick={() => (showPresets = true)} aria-label="Workouts">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-       <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-       <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-       <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-     </button>
      <VolumeControl />
     </div>
 
     <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
    </div>
   </div>
- {:else if showPresets}
-  <PresetList presets={PRESETS} onselect={handlePresetSelect} onclose={() => (showPresets = false)} />
  {:else if activePicker === "work"}
   <RulerPicker
    label="Work"
@@ -841,7 +824,11 @@
    font-size: clamp(10rem, 20vw, 24rem);
   }
 
-  .toolbar :global(svg),
+  .toolbar :global(svg) {
+   width: 48px;
+   height: 48px;
+  }
+
   .active-toolbar :global(svg) {
    width: 36px;
    height: 36px;

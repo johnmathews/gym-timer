@@ -17,7 +17,7 @@ On narrow screens, the layout is a vertical flex column with three sections:
 On wide desktop screens (≥1024px), the idle/home screen switches to a 2-column CSS grid:
 - **Left column**: Three config cards (Work, Rest, Repeat) stacked vertically
 - **Right column**: Total time display and play button, vertically centered
-- **Toolbar row**: Spans both columns at the top (fullscreen, presets, volume)
+- **Toolbar row**: Spans both columns at the top (fullscreen, volume)
 
 This reuses the same grid pattern as the phone landscape layout but with larger fonts and more generous spacing. All sizing uses `clamp()` to scale smoothly from 1024px to ultrawide displays.
 
@@ -101,18 +101,18 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `→`       | Next segment (skip forward)               |
 | `↑`       | Add a rep (live edit)                     |
 | `↓`       | Remove a rep (live edit)                  |
+| `R`       | Restart workout (active/paused/finished)  |
 | `F`       | Toggle fullscreen (works on any screen)   |
 | `Esc`     | Close overlay / Go home when finished     |
 | `?`       | Toggle keyboard shortcuts help modal      |
 
 **Escape behavior by context:**
 - Shortcuts modal open → closes modal
-- Presets list open → closes list
 - Picker open → cancels picker (reverts value)
 - Timer finished → returns to home screen
 - Timer running/paused → does nothing (except browser's native fullscreen exit)
 
-The `?` key opens a modal overlay listing all available shortcuts. It works from any screen (home, active timer, picker, presets). The modal is implemented as a `KeyboardShortcuts` component (`src/lib/components/KeyboardShortcuts.svelte`).
+The `?` key opens a modal overlay listing all available shortcuts. It works from any screen (home, active timer, picker). The modal is implemented as a `KeyboardShortcuts` component (`src/lib/components/KeyboardShortcuts.svelte`).
 
 ### Desktop — Arrow Buttons
 

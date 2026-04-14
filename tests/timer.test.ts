@@ -26,7 +26,7 @@ test.describe("Timer", () => {
   test("config cards show default values", async ({ page }) => {
     await expect(page.getByTestId("config-card-work")).toContainText("1:00");
     await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x6");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
   });
 
   test("shows total time and play button", async ({ page }) => {
@@ -35,8 +35,8 @@ test.describe("Timer", () => {
   });
 
   test("total time is calculated correctly", async ({ page }) => {
-    // Default (EMOM6): 60s work * 6 reps + 0s rest * 5 = 360s total => 6:00
-    await expect(page.getByTestId("total-time")).toHaveText("6:00");
+    // Default (EMOM10): 60s work * 10 reps + 0s rest * 9 = 600s total => 10:00
+    await expect(page.getByTestId("total-time")).toHaveText("10:00");
   });
 
   test("tapping work card opens ruler picker", async ({ page }) => {
@@ -624,49 +624,6 @@ test.describe("Timer", () => {
     ).toBeVisible();
   });
 
-  // --- Presets ---
-
-  test("presets button is visible on idle screen", async ({ page }) => {
-    await expect(page.getByTestId("presets-button")).toBeVisible();
-  });
-
-  test("presets button opens preset list overlay", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await expect(page.getByTestId("preset-list")).toBeVisible();
-    await expect(page.getByText("Workouts")).toBeVisible();
-  });
-
-  test("preset list shows cancel button", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-  });
-
-  test("selecting EMOM preset populates sliders", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom10").click();
-    await expect(page.getByTestId("preset-list")).not.toBeVisible();
-    await expect(page.getByTestId("config-card-work")).toContainText(
-      "Work 1:00",
-    );
-    await expect(page.getByTestId("config-card-rest")).toContainText("0:0");
-    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
-  });
-
-  test("total time updates after preset selection", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom10").click();
-    // EMOM: 60s work * 10 + 0s rest * 9 = 600s = 10:00
-    await expect(page.getByTestId("total-time")).toHaveText("10:00");
-  });
-
-  test("can start timer after preset selection", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await page.getByTestId("preset-emom10").click();
-    await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
-  });
-
   // --- Swipe gestures ---
 
   test("active-screen has touch-action: none to prevent browser gesture interference", async ({
@@ -1136,15 +1093,6 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("config-card-work")).toBeVisible();
   });
 
-  test("Escape closes presets list", async ({ page }) => {
-    await page.getByTestId("presets-button").click();
-    await expect(page.getByTestId("preset-list")).toBeVisible();
-
-    await page.keyboard.press("Escape");
-    await expect(page.getByTestId("preset-list")).not.toBeVisible();
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
-  });
-
   test("Space and arrows are ignored when picker is open", async ({ page }) => {
     await page.getByTestId("config-card-work").click();
     await expect(page.getByTestId("ruler-picker")).toBeVisible();
@@ -1226,6 +1174,42 @@ test.describe("Keyboard shortcuts", () => {
 
   test("Escape does nothing on idle screen with no overlay", async ({ page }) => {
     await page.keyboard.press("Escape");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("R restarts active workout", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await page.clock.fastForward(11000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    await page.keyboard.press("r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R restarts paused workout", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    await page.keyboard.press("Space"); // pause
+    await page.keyboard.press("r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R is case-insensitive", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await page.clock.fastForward(11000);
+
+    await page.keyboard.press("Shift+r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R does nothing on idle home screen", async ({ page }) => {
+    await page.keyboard.press("r");
     await expect(page.getByTestId("config-card-work")).toBeVisible();
   });
 });
