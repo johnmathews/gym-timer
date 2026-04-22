@@ -49,7 +49,7 @@ Three responsive breakpoints:
 - Wider app container (500px → 640px)
 - Larger countdown font
 - Chunkier progress bar segments (8px → 12px height, 4px → 6px radius)
-- Larger phase labels (1.75rem → 2rem)
+- Phase labels scale up (2.5rem → 2.6rem)
 
 **`@media (min-width: 1024px)`** — wide desktop:
 - App fills full viewport width with responsive padding (`clamp(40px, 5vw, 80px)`)
@@ -102,6 +102,7 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `↑`       | Add a rep (live edit)                     |
 | `↓`       | Remove a rep (live edit)                  |
 | `R`       | Restart workout (active/paused/finished)  |
+| `M`       | Toggle mute / unmute                      |
 | `F`       | Toggle fullscreen (works on any screen)   |
 | `Esc`     | Close overlay / Go home when finished     |
 | `?`       | Toggle keyboard shortcuts help modal      |

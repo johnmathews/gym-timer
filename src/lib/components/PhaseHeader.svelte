@@ -51,13 +51,13 @@
  }
 
  .phase-label {
-  font-size: 1.95rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
  }
 
  .rep-counter {
-  font-size: 1.95rem;
+  font-size: 2.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: rgba(0, 0, 0, 0.85);
