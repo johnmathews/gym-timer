@@ -33,6 +33,10 @@
           <span>Restart workout</span>
         </div>
         <div class="row">
+          <kbd>M</kbd>
+          <span>Toggle mute</span>
+        </div>
+        <div class="row">
           <kbd>F</kbd>
           <span>Toggle fullscreen</span>
         </div>

@@ -2,11 +2,19 @@
   import { onMount } from "svelte";
   import { getMasterVolume, setMasterVolume, initVolume, MAX_VOLUME, DESKTOP_MAX_VOLUME } from "$lib/timer";
 
+  const { syncTrigger = 0 }: { syncTrigger?: number } = $props();
+
   const SLIDER_MAX = 1000;
   let sliderValue = $state(0);
   let open = $state(false);
   let containerEl: HTMLDivElement | undefined = $state();
   let maxVolume = MAX_VOLUME;
+
+  $effect(() => {
+    if (syncTrigger > 0) {
+      sliderValue = volumeToSlider(getMasterVolume());
+    }
+  });
 
   /** Quadratic curve: most of the slider covers the quiet range. */
   function sliderToVolume(s: number): number {

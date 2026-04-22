@@ -26,6 +26,17 @@ export function setMasterVolume(v: number): void {
 
 const DEFAULT_VOLUME = MAX_VOLUME * 0.60;
 const DESKTOP_DEFAULT_VOLUME = MAX_VOLUME * 0.40;
+let _preMuteVolume: number | null = null;
+
+export function toggleMute(): void {
+  if (_masterVolume > 0) {
+    _preMuteVolume = _masterVolume;
+    setMasterVolume(0);
+  } else {
+    setMasterVolume(_preMuteVolume ?? DEFAULT_VOLUME);
+    _preMuteVolume = null;
+  }
+}
 
 export function initVolume(): void {
   _masterVolume = DEFAULT_VOLUME;

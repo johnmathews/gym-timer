@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, playFinishSound, playRestStartSound, playWorkStartSound, playPauseSound, playResumeSound, playCountdownDing, resetAudioContext, resumeAudioContext } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, toggleMute, playFinishSound, playRestStartSound, playWorkStartSound, playPauseSound, playResumeSound, playCountdownDing, resetAudioContext, resumeAudioContext } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -1538,6 +1538,53 @@ describe("master volume", () => {
     setMasterVolume(0.8);
     initVolume();
     expect(getMasterVolume()).toBe(0.8);
+  });
+});
+
+describe("toggleMute", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setMasterVolume(10.0);
+  });
+
+  it("mutes by setting volume to 0", () => {
+    toggleMute();
+    expect(getMasterVolume()).toBe(0);
+  });
+
+  it("unmutes by restoring previous volume", () => {
+    toggleMute(); // mute
+    toggleMute(); // unmute
+    expect(getMasterVolume()).toBe(10.0);
+  });
+
+  it("restores default volume when unmuting from manually-zeroed volume", () => {
+    setMasterVolume(0);
+    toggleMute(); // was already 0, no pre-mute saved → restores default
+    expect(getMasterVolume()).toBeGreaterThan(0);
+  });
+
+  it("round-trips correctly across multiple toggles", () => {
+    setMasterVolume(5.0);
+    toggleMute();
+    expect(getMasterVolume()).toBe(0);
+    toggleMute();
+    expect(getMasterVolume()).toBe(5.0);
+    toggleMute();
+    expect(getMasterVolume()).toBe(0);
+    toggleMute();
+    expect(getMasterVolume()).toBe(5.0);
+  });
+
+  it("persists muted state to localStorage", () => {
+    toggleMute();
+    expect(localStorage.getItem("timer-volume")).toBe("0");
+  });
+
+  it("persists restored volume to localStorage", () => {
+    toggleMute(); // mute
+    toggleMute(); // unmute
+    expect(localStorage.getItem("timer-volume")).toBe("10");
   });
 });
 

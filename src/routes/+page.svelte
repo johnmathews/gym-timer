@@ -13,6 +13,7 @@
   warmAudioContext,
   startKeepAlive,
   stopKeepAlive,
+  toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
@@ -38,6 +39,7 @@
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
  let showShortcuts = $state(false);
+ let volumeSyncTrigger = $state(0);
 
  // Wake lock: always-on when timer is active
  let wakeLock: WakeLockSentinel | null = null;
@@ -271,6 +273,14 @@
    return;
   }
 
+  // M to toggle mute works everywhere
+  if ((e.key === "m" || e.key === "M") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+   e.preventDefault();
+   toggleMute();
+   volumeSyncTrigger++;
+   return;
+  }
+
   // F for fullscreen works everywhere
   if (e.key === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
    e.preventDefault();
@@ -379,7 +389,7 @@
    <div class="home-right">
     <div class="toolbar">
      <FullscreenButton />
-     <VolumeControl />
+     <VolumeControl syncTrigger={volumeSyncTrigger} />
     </div>
 
     <TotalTimeDisplay totalTime={totalTimeDisplay} {canStart} onstart={handleStart} />
@@ -430,7 +440,7 @@
   <div class="active-screen" data-testid="active-screen" onpointerdown={handlePointerDown} onpointerup={handlePointerUp}>
    <div class="active-toolbar">
     <FullscreenButton />
-    <VolumeControl />
+    <VolumeControl syncTrigger={volumeSyncTrigger} />
    </div>
    <PhaseHeader phase={$phase} currentRep={$currentRep} totalReps={$totalReps} status={$status} />
 
