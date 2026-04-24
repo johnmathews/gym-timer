@@ -1,4 +1,4 @@
-# presets.yml Feature & iOS Swipe Bug Fix
+# presets.yml Feature, iOS Swipe Fix & Runtime Preset Loading
 
 ## Date: 2026-04-24
 
@@ -22,32 +22,48 @@
 - Added `$presets` Vite alias in `vite.config.ts` that resolves to the correct YAML file:
   - Production: `presets.yml`
   - Tests (vitest/playwright): `tests/fixtures/presets.yml`
-- Rewrote `src/lib/presets.ts` to import from `$presets`, validate with `parsePresets()`, and export `PRESETS`
+- Rewrote `src/lib/presets.ts` to import from `$presets`, validate with `parsePresets()`, and export `DEFAULT_PRESETS`
 - Added TypeScript declarations for `.yml` and `$presets` module imports
 
 **Test isolation:** The `$presets` alias swaps to `tests/fixtures/presets.yml` when either `VITEST` or `TEST_PRESETS` env var is set. Vitest sets `VITEST` automatically; Playwright's webServer command sets `TEST_PRESETS=1`. This means editing the production `presets.yml` never breaks any tests.
 
-## Test Results
+### 3. Runtime Preset Loading
 
-- Unit tests: 133 passed (was 121 — added 12 new `parsePresets` validation tests)
-- E2e tests: 88 passed (unchanged)
-- Lint: 0 errors (31 pre-existing warnings)
-- Build: successful
+**Goal:** Allow presets to be changed on the infra VM without rebuilding or redeploying the Docker container.
 
-## Files Changed
+**How it works:**
+- On page load, the app fetches `/presets.yml` from the server
+- If the server has a mounted config file (via Docker volume), those presets replace the build-time defaults
+- If the fetch fails (404, parse error), the app silently uses compiled defaults
+- No loading state — app renders instantly with defaults, swaps in runtime presets within milliseconds
 
-- `presets.yml` — new, preset definitions
-- `tests/fixtures/presets.yml` — new, test fixture presets
-- `src/lib/presets.ts` — rewritten to import from YAML
-- `src/lib/presets.test.ts` — rewritten with parsePresets tests + fixture validation
-- `src/yml.d.ts` — new, TypeScript declarations for YAML imports
-- `vite.config.ts` — added YAML plugin and `$presets` alias
-- `playwright.config.ts` — added `TEST_PRESETS=1` to build command
-- `src/routes/+page.svelte` — added `touch-action: pan-y` to `.home` CSS
-- `package.json` — added `@modyfi/vite-plugin-yaml` dependency
-- `CLAUDE.md` — updated key files section
-- `docs/presets.md` — rewritten for YAML-based preset system
+**Key implementation details:**
+- Added `js-yaml` as a runtime dependency for parsing YAML in the browser
+- `fetchPresets()` in `presets.ts` does fetch → parse YAML → validate → return
+- nginx.conf serves `/presets.yml` from `/config/presets.yml` with `no-store` caching
+- Presets are reactive `$state` in `+page.svelte`, updated on mount
 
-### 3. Git Pre-Push Hook
+### 4. Docker Directory Mount Fix
+
+**Problem:** Editing `presets.yml` on the infra VM host didn't reflect inside the container, even after page reload.
+
+**Root cause:** Docker bind mounts of individual files use the file's inode. Text editors (vim, nano) create a new file with a new inode when saving, so the container's mount points to the old inode with stale content.
+
+**Fix:** Changed from file mount (`./timer/presets.yml:/presets.yml`) to directory mount (`./timer:/config`). nginx now reads from `/config/presets.yml`. Directory mounts always reflect current file content regardless of inode changes.
+
+### 5. Git Pre-Push Hook
 
 Added a local pre-push hook (`.git/hooks/pre-push`) that runs lint and unit tests before every `git push`. Aborts the push if either fails. E2e tests are excluded (too slow for a hook — CI handles those). This hook is local-only and not tracked by git.
+
+### 6. Test Coverage for New Features
+
+Added tests that were missing for the session's changes:
+- 6 unit tests for `fetchPresets()`: success, 404 fallback, network error, malformed YAML, invalid preset data, multiple presets
+- 1 e2e test: home screen has `touch-action: pan-y` for iOS swipe compatibility
+
+## Test Results
+
+- Unit tests: 139 passed (was 121 at start of session)
+- E2e tests: 89 passed (was 88 at start of session)
+- Lint: 0 errors (31 pre-existing warnings)
+- Build: successful

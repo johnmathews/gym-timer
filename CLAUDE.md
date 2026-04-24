@@ -17,14 +17,14 @@
 - Requires Node 22+ (use `nvm use 22`)
 
 ## Key Files
-- `presets.yml` — workout preset definitions (name, work, rest, reps) loaded at build time
+- `presets.yml` — workout preset definitions (name, work, rest, reps); build-time defaults + runtime override via Docker mount
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
-- `src/lib/presets.ts` — imports presets.yml via `$presets` alias, validates with `parsePresets()`, exports `PRESETS`
+- `src/lib/presets.ts` — exports `DEFAULT_PRESETS` (build-time), `fetchPresets()` (runtime from `/presets.yml`), `parsePresets()` (validation)
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList, KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 115 unit tests
-- `src/lib/presets.test.ts` — 18 preset/parsePresets tests
-- `tests/timer.test.ts` — 88 e2e tests (Playwright)
+- `src/lib/presets.test.ts` — 24 preset/parsePresets/fetchPresets tests
+- `tests/timer.test.ts` — 89 e2e tests (Playwright)
 - `tests/fixtures/presets.yml` — test preset fixture (isolates tests from production presets.yml changes)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
@@ -36,6 +36,12 @@
 - Swipe back to work segment inserts a getReady countdown before it
 - Desktop keyboard shortcuts: Space (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), F (fullscreen), Esc (close overlay/home when finished), ? (shortcuts help modal)
 - Home screen preset cycling: swipe left/right (touch) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
+
+## Presets
+- Build-time defaults from `presets.yml` are compiled into the JS bundle via `@modyfi/vite-plugin-yaml`
+- At runtime, the app fetches `/presets.yml` from the server; if a mounted config exists, it overrides defaults
+- Docker deployment: mount the directory containing `presets.yml` to `/config/` (not a single file — inode issues)
+- Edit the file on the host and reload the page to update presets without redeploying
 
 ## Deployment
 - Production is deployed on the infra VM as part of its Docker Compose stack
