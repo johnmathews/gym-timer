@@ -3,7 +3,12 @@
   rest: 0
   reps: 10
 
-- name: Intervals
+- name: 3 Hangs
   work: 30
   rest: 15
-  reps: 10
+  reps: 3
+
+- name: 5 Hangs
+  work: 30
+  rest: 15
+  reps: 5
