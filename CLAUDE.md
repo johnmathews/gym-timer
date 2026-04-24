@@ -18,12 +18,12 @@
 
 ## Key Files
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
-- `src/lib/presets.ts` — built-in workout presets (mothballed, not currently used in UI)
+- `src/lib/presets.ts` — built-in workout presets (cycled via swipe/arrow keys on home screen)
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList, KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 115 unit tests
 - `src/lib/presets.test.ts` — 6 preset validation tests
-- `tests/timer.test.ts` — 82 e2e tests (Playwright)
+- `tests/timer.test.ts` — 88 e2e tests (Playwright)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases
@@ -32,7 +32,8 @@
 - Pause/resume: subtle toggle sounds, tap screen to resume (no resume button)
 - Background colors: getReady/rest = yellow `#FFBA08`, work = green `#2ECC71`, paused = black, finished = 4-color flash (red/yellow/green/cyan, ~11.5s)
 - Swipe back to work segment inserts a getReady countdown before it
-- Desktop keyboard shortcuts: Space (play/pause/resume), Left/Right (skip), Up/Down (add/remove rep), R (restart workout), F (fullscreen), Esc (close overlay/home when finished), ? (shortcuts help modal)
+- Desktop keyboard shortcuts: Space (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), F (fullscreen), Esc (close overlay/home when finished), ? (shortcuts help modal)
+- Home screen preset cycling: swipe left/right (touch) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
 
 ## Deployment
 - Production is deployed on the infra VM as part of its Docker Compose stack

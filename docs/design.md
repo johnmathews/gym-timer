@@ -94,18 +94,19 @@ Implemented via `onpointerdown`/`onpointerup` handlers that track start position
 
 On hover-capable devices, the following keyboard shortcuts are available:
 
-| Key       | Action                                    |
-|-----------|-------------------------------------------|
-| `Space`   | Play / Pause / Resume                     |
-| `←`       | Previous segment (skip backward)          |
-| `→`       | Next segment (skip forward)               |
-| `↑`       | Add a rep (live edit)                     |
-| `↓`       | Remove a rep (live edit)                  |
-| `R`       | Restart workout (active/paused/finished)  |
-| `M`       | Toggle mute / unmute                      |
-| `F`       | Toggle fullscreen (works on any screen)   |
-| `Esc`     | Close overlay / Go home when finished     |
-| `?`       | Toggle keyboard shortcuts help modal      |
+| Key       | Action                                              |
+|-----------|-----------------------------------------------------|
+| `Space`   | Play / Pause / Resume                               |
+| `←`       | Previous segment (active) / Previous preset (idle)  |
+| `→`       | Next segment (active) / Next preset (idle)          |
+| `↑`       | Add a rep (live edit)                               |
+| `↓`       | Remove a rep (live edit)                            |
+| `R`       | Restart workout (active/paused/finished)            |
+| `H`       | Go home (paused/finished)                           |
+| `M`       | Toggle mute / unmute                                |
+| `F`       | Toggle fullscreen (works on any screen)             |
+| `Esc`     | Close overlay / Go home when finished               |
+| `?`       | Toggle keyboard shortcuts help modal                |
 
 **Escape behavior by context:**
 - Shortcuts modal open → closes modal
@@ -123,6 +124,23 @@ The `?` key opens a modal overlay listing all available shortcuts. It works from
 - Adapts to paused state (white on black background)
 - Hidden during finished state
 - Uses Material Design chevron SVG icons
+
+## Preset Cycling
+
+The home screen supports cycling through preset timer configurations:
+
+- **Touch**: Swipe left/right on the home screen (same 50px threshold as active screen swipes)
+- **Keyboard**: Left/Right arrow keys when on the idle home screen (no picker open)
+- The list wraps around in both directions
+- A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)
+- Manual config changes (via pickers) are discarded when cycling to a new preset
+- Presets are defined in `src/lib/presets.ts` as an array of `{ work, rest, reps }` objects
+
+Current presets:
+1. Work 60s, Rest 0s, Reps 10 (default)
+2. Work 30s, Rest 15s, Reps 10
+
+Swipe handling on the home screen excludes buttons, toolbar, and config cards from swipe capture to avoid interfering with tap-to-open-picker behavior.
 
 ## Config Cards
 
