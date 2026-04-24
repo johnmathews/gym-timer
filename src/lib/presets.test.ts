@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { DEFAULT_PRESETS, parsePresets } from "./presets";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DEFAULT_PRESETS, parsePresets, fetchPresets } from "./presets";
 
 describe("parsePresets", () => {
   it("parses valid preset data", () => {
@@ -95,5 +95,78 @@ describe("DEFAULT_PRESETS (loaded from test fixture)", () => {
 
   it("first preset matches test fixture defaults (60s work, 0s rest, 10 reps)", () => {
     expect(DEFAULT_PRESETS[0]).toEqual({ name: "Test EMOM", work: 60, rest: 0, reps: 10 });
+  });
+});
+
+describe("fetchPresets", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns parsed presets on successful fetch", async () => {
+    const yamlText = "- name: Remote\n  work: 45\n  rest: 15\n  reps: 6\n";
+    vi.stubGlobal("fetch", vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve(yamlText) }),
+    ));
+
+    const result = await fetchPresets();
+    expect(result).toEqual([{ name: "Remote", work: 45, rest: 15, reps: 6 }]);
+    expect(fetch).toHaveBeenCalledWith("/presets.yml");
+  });
+
+  it("returns null on 404", async () => {
+    vi.stubGlobal("fetch", vi.fn(() =>
+      Promise.resolve({ ok: false, status: 404 }),
+    ));
+
+    const result = await fetchPresets();
+    expect(result).toBeNull();
+  });
+
+  it("returns null on network error", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("network error"))));
+
+    const result = await fetchPresets();
+    expect(result).toBeNull();
+  });
+
+  it("returns null on malformed YAML", async () => {
+    vi.stubGlobal("fetch", vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve("not: valid: preset: data") }),
+    ));
+
+    const result = await fetchPresets();
+    expect(result).toBeNull();
+  });
+
+  it("returns null when YAML is valid but fails preset validation", async () => {
+    const yamlText = "- name: Bad\n  work: -1\n  rest: 0\n  reps: 1\n";
+    vi.stubGlobal("fetch", vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve(yamlText) }),
+    ));
+
+    const result = await fetchPresets();
+    expect(result).toBeNull();
+  });
+
+  it("parses multiple presets from YAML", async () => {
+    const yamlText = [
+      "- name: A",
+      "  work: 60",
+      "  rest: 0",
+      "  reps: 10",
+      "- name: B",
+      "  work: 30",
+      "  rest: 15",
+      "  reps: 5",
+    ].join("\n");
+    vi.stubGlobal("fetch", vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve(yamlText) }),
+    ));
+
+    const result = await fetchPresets();
+    expect(result).toHaveLength(2);
+    expect(result![0].name).toBe("A");
+    expect(result![1].name).toBe("B");
   });
 });

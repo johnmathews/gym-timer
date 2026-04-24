@@ -637,6 +637,16 @@ test.describe("Timer", () => {
     expect(touchAction).toBe("none");
   });
 
+  test("home screen has touch-action: pan-y for iOS swipe preset cycling", async ({
+    page,
+  }) => {
+    const home = page.locator(".home");
+    const touchAction = await home.evaluate(
+      (el) => getComputedStyle(el).touchAction,
+    );
+    expect(touchAction).toBe("pan-y");
+  });
+
   test("swipe left skips forward from getReady to work", async ({ page }) => {
     // Need multi-rep so phase header shows
     await page.getByTestId("config-card-repeat").click();
