@@ -1,3 +1,4 @@
+import yaml from "js-yaml";
 import rawPresets from "$presets";
 
 export interface Preset {
@@ -32,4 +33,22 @@ export function parsePresets(data: unknown): Preset[] {
   });
 }
 
-export const PRESETS: Preset[] = parsePresets(rawPresets);
+/** Build-time defaults compiled from presets.yml */
+export const DEFAULT_PRESETS: Preset[] = parsePresets(rawPresets);
+
+/**
+ * Fetch presets from the server at runtime.
+ * Returns parsed presets if the server has a mounted presets.yml,
+ * or null if the fetch fails (caller should fall back to defaults).
+ */
+export async function fetchPresets(): Promise<Preset[] | null> {
+  try {
+    const res = await fetch("/presets.yml");
+    if (!res.ok) return null;
+    const text = await res.text();
+    const data = yaml.load(text);
+    return parsePresets(data);
+  } catch {
+    return null;
+  }
+}

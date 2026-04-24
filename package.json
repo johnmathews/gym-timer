@@ -25,6 +25,7 @@
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.55.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
@@ -39,6 +40,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@modyfi/vite-plugin-yaml": "^1.1.1"
+    "@modyfi/vite-plugin-yaml": "^1.1.1",
+    "js-yaml": "^4.1.1"
   }
 }

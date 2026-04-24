@@ -16,7 +16,7 @@
   toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
- import { PRESETS } from "$lib/presets";
+ import { DEFAULT_PRESETS, fetchPresets } from "$lib/presets";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
  import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
@@ -37,6 +37,7 @@
  let prevRep: number = 1;
  let prevRemaining: number = 0;
 
+ let presets = $state(DEFAULT_PRESETS);
  let presetIndex = $state(0);
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
@@ -82,6 +83,16 @@
   initVolume();
   log("mount", { duration, rest, reps });
   timer.configure(duration, rest, reps);
+
+  // Load runtime presets from server (mounted config file)
+  fetchPresets().then((fetched) => {
+   if (fetched) {
+    presets = fetched;
+    presetIndex = 0;
+    applyPreset(0);
+    log("presets:runtime", { count: fetched.length });
+   }
+  });
 
   function handleVisibility() {
    if (document.visibilityState === "visible") {
@@ -211,7 +222,7 @@
 
  // Preset cycling
  function applyPreset(index: number) {
-  const preset = PRESETS[index];
+  const preset = presets[index];
   duration = preset.work;
   rest = preset.rest;
   reps = preset.reps;
@@ -220,7 +231,7 @@
  }
 
  function cyclePreset(direction: 1 | -1) {
-  presetIndex = ((presetIndex + direction) % PRESETS.length + PRESETS.length) % PRESETS.length;
+  presetIndex = ((presetIndex + direction) % presets.length + presets.length) % presets.length;
   applyPreset(presetIndex);
  }
 
@@ -448,7 +459,7 @@
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
     <div class="preset-dots" data-testid="preset-dots">
-     {#each PRESETS as _, i (i)}
+     {#each presets as _, i (i)}
       <span class="dot" class:active={i === presetIndex}></span>
      {/each}
     </div>
