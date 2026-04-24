@@ -47,3 +47,7 @@
 - `package.json` — added `@modyfi/vite-plugin-yaml` dependency
 - `CLAUDE.md` — updated key files section
 - `docs/presets.md` — rewritten for YAML-based preset system
+
+### 3. Git Pre-Push Hook
+
+Added a local pre-push hook (`.git/hooks/pre-push`) that runs lint and unit tests before every `git push`. Aborts the push if either fails. E2e tests are excluded (too slow for a hook — CI handles those). This hook is local-only and not tracked by git.
