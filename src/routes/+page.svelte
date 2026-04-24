@@ -259,9 +259,9 @@
 
   if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
    if (deltaX < 0) {
-    cyclePreset(-1);
-   } else {
     cyclePreset(1);
+   } else {
+    cyclePreset(-1);
    }
   }
  }
@@ -878,7 +878,7 @@
 
   .home {
    display: grid;
-   grid-template-columns: 1fr 1fr;
+   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
    grid-template-rows: auto 1fr;
    gap: 0 clamp(40px, 5vw, 80px);
    flex: 1;
@@ -917,20 +917,22 @@
    grid-row: 2;
    align-self: center;
    padding: 0;
+   overflow: hidden;
   }
 
   .home :global(.total-time-display .row) {
    justify-content: center;
-   gap: clamp(20px, 3vw, 50px);
+   gap: clamp(16px, 2vw, 40px);
   }
 
   .home :global(.total-time-display .play-btn) {
-   width: clamp(100px, 14vw, 200px);
+   width: clamp(80px, 10vw, 160px);
   }
 
   .home :global(.total-time-display .time) {
-   flex: 0;
-   font-size: clamp(10rem, 20vw, 24rem);
+   flex: 1;
+   min-width: 0;
+   font-size: clamp(7rem, 12vw, 20rem);
   }
 
   .toolbar :global(svg) {
@@ -954,7 +956,7 @@
 
   .home {
    display: grid;
-   grid-template-columns: 1fr 1fr;
+   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
    grid-template-rows: auto 1fr;
    gap: 0 24px;
    padding-bottom: 5%;
@@ -995,11 +997,12 @@
    grid-row: 2;
    align-self: center;
    padding: 0;
+   overflow: hidden;
   }
 
   .home :global(.total-time-display .row) {
    justify-content: center;
-   gap: 30px;
+   gap: 20px;
   }
 
   .home :global(.total-time-display .play-btn) {
@@ -1007,8 +1010,9 @@
   }
 
   .home :global(.total-time-display .time) {
-   flex: 0;
-   font-size: min(25vw, 10rem);
+   flex: 1;
+   min-width: 0;
+   font-size: min(13vw, 7rem);
   }
  }
 </style>

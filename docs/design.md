@@ -6,8 +6,8 @@ The app uses a single-page layout centered on screen with responsive width const
 
 - **Mobile** (<768px): max-width 500px, single-column vertical layout
 - **Desktop** (768px–1023px): max-width 640px, single-column vertical layout
-- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** — config cards on the left, total time + play button on the right, all elements scale with viewport
-- **Phone landscape** (<500px height): full-width 2-column grid with compressed card sizes
+- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** (`minmax(0, 1fr)` columns for fixed 50/50 split) — config cards on the left, total time + play button on the right, all elements scale with viewport
+- **Phone landscape** (<500px height): full-width 2-column grid (`minmax(0, 1fr)`) with compressed card sizes
 
 On narrow screens, the layout is a vertical flex column with three sections:
 1. **Config area** (idle) or **Phase header** (active) — top
@@ -55,8 +55,8 @@ Three responsive breakpoints:
 - App fills full viewport width with responsive padding (`clamp(40px, 5vw, 80px)`)
 - Home screen switches from single column to 2-column grid
 - Config cards scale up: height `clamp(90px, 12vh, 160px)`, labels `clamp(2.5rem, 3.5vw, 4rem)` at weight 600, values up to `6rem`
-- Total time font: `clamp(10rem, 20vw, 24rem)`
-- Play button: `clamp(100px, 14vw, 200px)`
+- Total time font: `clamp(7rem, 12vw, 20rem)` — sized to fit within a 50/50 grid column
+- Play button: `clamp(80px, 10vw, 160px)`
 - Toolbar icons: 36px (up from 28px on mobile)
 
 **`@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)`** — phone landscape:
@@ -129,7 +129,7 @@ The `?` key opens a modal overlay listing all available shortcuts. It works from
 
 The home screen supports cycling through preset timer configurations:
 
-- **Touch**: Swipe left/right on the home screen (same 50px threshold as active screen swipes)
+- **Touch**: Swipe left = next preset, swipe right = previous preset (matches iOS carousel convention and the active screen's skip direction; same 50px threshold)
 - **Keyboard**: Left/Right arrow keys when on the idle home screen (no picker open)
 - The list wraps around in both directions
 - A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)
