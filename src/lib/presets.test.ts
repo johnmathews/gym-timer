@@ -6,9 +6,9 @@ describe('presets', () => {
     expect(PRESETS.length).toBeGreaterThan(0);
   });
 
-  it('all names are unique', () => {
-    const names = PRESETS.map(p => p.name);
-    expect(new Set(names).size).toBe(names.length);
+  it('all presets are unique combinations', () => {
+    const keys = PRESETS.map(p => `${p.work}-${p.rest}-${p.reps}`);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('all work values are within slider range (5-600s) and on 5s grid', () => {
@@ -27,17 +27,14 @@ describe('presets', () => {
     }
   });
 
-  it('all reps are within slider range (1-10)', () => {
+  it('all reps are within slider range (1-20)', () => {
     for (const p of PRESETS) {
       expect(p.reps).toBeGreaterThanOrEqual(1);
-      expect(p.reps).toBeLessThanOrEqual(10);
+      expect(p.reps).toBeLessThanOrEqual(20);
     }
   });
 
-  it('all names are non-empty strings', () => {
-    for (const p of PRESETS) {
-      expect(typeof p.name).toBe('string');
-      expect(p.name.trim().length).toBeGreaterThan(0);
-    }
+  it('first preset matches default values (60s work, 0s rest, 10 reps)', () => {
+    expect(PRESETS[0]).toEqual({ work: 60, rest: 0, reps: 10 });
   });
 });

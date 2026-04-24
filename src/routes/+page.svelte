@@ -16,6 +16,7 @@
   toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
+ import { PRESETS } from "$lib/presets";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
  import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
@@ -35,6 +36,8 @@
  let prevPhase: string = "work";
  let prevRep: number = 1;
  let prevRemaining: number = 0;
+
+ let presetIndex = $state(0);
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
@@ -206,6 +209,52 @@
   timer.reset();
  }
 
+ // Preset cycling
+ function applyPreset(index: number) {
+  const preset = PRESETS[index];
+  duration = preset.work;
+  rest = preset.rest;
+  reps = preset.reps;
+  timer.configure(duration, rest, reps);
+  log("preset:apply", { index, ...preset });
+ }
+
+ function cyclePreset(direction: 1 | -1) {
+  presetIndex = ((presetIndex + direction) % PRESETS.length + PRESETS.length) % PRESETS.length;
+  applyPreset(presetIndex);
+ }
+
+ // Home screen swipe handling
+ let homeSwipeStartX = 0;
+ let homeSwipeStartY = 0;
+ let homeSwipePointerId = -1;
+
+ function handleHomePointerDown(e: PointerEvent) {
+  if ((e.target as HTMLElement).closest("button")) return;
+  if ((e.target as HTMLElement).closest(".toolbar")) return;
+  if ((e.target as HTMLElement).closest(".config-card")) return;
+  homeSwipeStartX = e.clientX;
+  homeSwipeStartY = e.clientY;
+  homeSwipePointerId = e.pointerId;
+  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+ }
+
+ function handleHomePointerUp(e: PointerEvent) {
+  if (e.pointerId !== homeSwipePointerId) return;
+  homeSwipePointerId = -1;
+
+  const deltaX = e.clientX - homeSwipeStartX;
+  const deltaY = e.clientY - homeSwipeStartY;
+
+  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+   if (deltaX < 0) {
+    cyclePreset(1);
+   } else {
+    cyclePreset(-1);
+   }
+  }
+ }
+
  // Picker helpers
  function openPicker(which: "work" | "rest" | "repeat") {
   if (which === "work") pickerOriginalValue = duration;
@@ -314,6 +363,13 @@
    }
   }
 
+  // H to go home (same as Escape for finished/paused)
+  if ((e.key === "h" || e.key === "H") && !e.metaKey && !e.ctrlKey && !e.altKey && (isFinished || isPaused)) {
+   e.preventDefault();
+   handleReset();
+   return;
+  }
+
   // R to restart current workout (does nothing from home screen)
   if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey && (isActive || isFinished)) {
    e.preventDefault();
@@ -340,6 +396,12 @@
     playResumeSound();
     timer.start();
    }
+  } else if (e.key === "ArrowLeft" && $status === "idle") {
+   e.preventDefault();
+   cyclePreset(-1);
+  } else if (e.key === "ArrowRight" && $status === "idle") {
+   e.preventDefault();
+   cyclePreset(1);
   } else if (e.key === "ArrowLeft" && isActive) {
    e.preventDefault();
    resumeAudioContext();
@@ -379,11 +441,17 @@
 >
  {#if $status === "idle" && !activePicker}
   <!-- Idle: show config cards + total time -->
-  <div class="home">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="home" onpointerdown={handleHomePointerDown} onpointerup={handleHomePointerUp}>
    <div class="cards">
     <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
+    <div class="preset-dots" data-testid="preset-dots">
+     {#each PRESETS as _, i (i)}
+      <span class="dot" class:active={i === presetIndex}></span>
+     {/each}
+    </div>
    </div>
 
    <div class="home-right">
@@ -566,6 +634,25 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
+ }
+
+ .preset-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 4px;
+ }
+
+ .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: background 0.2s ease;
+ }
+
+ .dot.active {
+  background: rgba(255, 255, 255, 0.85);
  }
 
  .toolbar {

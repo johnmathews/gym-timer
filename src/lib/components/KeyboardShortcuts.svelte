@@ -14,11 +14,11 @@
         </div>
         <div class="row">
           <kbd>&larr;</kbd>
-          <span>Previous segment</span>
+          <span>Previous segment / preset</span>
         </div>
         <div class="row">
           <kbd>&rarr;</kbd>
-          <span>Next segment</span>
+          <span>Next segment / preset</span>
         </div>
         <div class="row">
           <kbd>&uarr;</kbd>
@@ -39,6 +39,10 @@
         <div class="row">
           <kbd>F</kbd>
           <span>Toggle fullscreen</span>
+        </div>
+        <div class="row">
+          <kbd>H</kbd>
+          <span>Home (when paused / finished)</span>
         </div>
         <div class="row">
           <kbd>Esc</kbd>

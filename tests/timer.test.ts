@@ -1166,10 +1166,78 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.locator(".app")).toHaveClass(/finished/);
   });
 
-  test("arrows do nothing on idle screen", async ({ page }) => {
-    await page.keyboard.press("ArrowLeft");
+  test("ArrowRight cycles to next preset on idle screen", async ({ page }) => {
+    // Default preset: work=1:00, rest=0:00, reps=x10
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
+
     await page.keyboard.press("ArrowRight");
+    // Second preset: work=0:30, rest=0:15, reps=x10
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
+  });
+
+  test("ArrowLeft cycles to previous preset on idle screen", async ({ page }) => {
+    // From default (index 0), ArrowLeft wraps to last preset (index 1)
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
+  });
+
+  test("preset cycling wraps around", async ({ page }) => {
+    // Press ArrowRight twice — should wrap back to first preset
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
+  });
+
+  test("preset dot indicator shows active preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots).toHaveCount(2);
+    await expect(dots.nth(0)).toHaveClass(/active/);
+    await expect(dots.nth(1)).not.toHaveClass(/active/);
+
+    await page.keyboard.press("ArrowRight");
+    await expect(dots.nth(0)).not.toHaveClass(/active/);
+    await expect(dots.nth(1)).toHaveClass(/active/);
+  });
+
+  test("H returns to home screen when finished", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-1").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await page.clock.fastForward(16000);
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+
+    await page.keyboard.press("h");
     await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("H returns to home screen when paused", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("H does nothing on idle screen or while running", async ({ page }) => {
+    // H on idle — should stay on home screen
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+
+    // H while running — should stay on active screen
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("active-screen")).toBeVisible();
   });
 
   test("Escape does nothing on idle screen with no overlay", async ({ page }) => {
