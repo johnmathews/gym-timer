@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "tests",
   webServer: {
-    command: "npm run build && npm run preview",
+    command: "TEST_PRESETS=1 npm run build && npm run preview",
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },

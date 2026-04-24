@@ -1,0 +1,9 @@
+- name: Test EMOM
+  work: 60
+  rest: 0
+  reps: 10
+
+- name: Test Intervals
+  work: 30
+  rest: 15
+  reps: 10

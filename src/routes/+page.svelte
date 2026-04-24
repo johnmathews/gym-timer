@@ -623,6 +623,7 @@
   align-items: center;
   width: 100%;
   flex: 1;
+  touch-action: pan-y;
  }
 
  .home-right {

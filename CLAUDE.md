@@ -17,13 +17,15 @@
 - Requires Node 22+ (use `nvm use 22`)
 
 ## Key Files
+- `presets.yml` — workout preset definitions (name, work, rest, reps) loaded at build time
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
-- `src/lib/presets.ts` — built-in workout presets (cycled via swipe/arrow keys on home screen)
+- `src/lib/presets.ts` — imports presets.yml via `$presets` alias, validates with `parsePresets()`, exports `PRESETS`
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList, KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 115 unit tests
-- `src/lib/presets.test.ts` — 6 preset validation tests
+- `src/lib/presets.test.ts` — 18 preset/parsePresets tests
 - `tests/timer.test.ts` — 88 e2e tests (Playwright)
+- `tests/fixtures/presets.yml` — test preset fixture (isolates tests from production presets.yml changes)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases
