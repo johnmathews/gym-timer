@@ -259,9 +259,9 @@
 
   if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
    if (deltaX < 0) {
-    cyclePreset(1);
-   } else {
     cyclePreset(-1);
+   } else {
+    cyclePreset(1);
    }
   }
  }
