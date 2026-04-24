@@ -24,21 +24,41 @@ The first preset is loaded by default on page load. All values should be within 
 
 ## Architecture
 
-### Data Flow
+### Build-Time Defaults
 
-1. **`presets.yml`** (project root) — the source of truth for preset definitions
+1. **`presets.yml`** (project root) — default preset definitions compiled into the JS bundle
 2. **`@modyfi/vite-plugin-yaml`** — Vite plugin that transforms YAML imports into JS objects at build time
 3. **`$presets` alias** (vite.config.ts) — resolves to `presets.yml` in production or `tests/fixtures/presets.yml` during tests
-4. **`src/lib/presets.ts`** — imports via `$presets`, validates with `parsePresets()`, exports `PRESETS` array
+4. **`src/lib/presets.ts`** — imports via `$presets`, validates with `parsePresets()`, exports `DEFAULT_PRESETS`
+
+### Runtime Override
+
+On page load, the app fetches `/presets.yml` from the server. If a valid YAML file is served (e.g., from a Docker volume mount), those presets replace the build-time defaults. If the fetch fails (404, parse error), the app silently uses the compiled defaults.
+
+- **`fetchPresets()`** in `src/lib/presets.ts` — fetches `/presets.yml`, parses with `js-yaml`, validates with `parsePresets()`
+- **nginx.conf** — `location = /presets.yml` serves `/config/presets.yml` with `no-store` caching
+
+### Docker Deployment
+
+Mount a **directory** containing `presets.yml` to `/config/` in the container:
+
+```yaml
+volumes:
+  - ./timer:/config
+```
+
+**Important:** Mount the directory, not the file directly. Docker bind mounts of individual files don't update when the host file is edited — most editors create a new inode, breaking the bind mount. Directory mounts always reflect the current file content.
 
 ### `src/lib/presets.ts`
 
 - `Preset` interface: `{ name, work, rest, reps }`
 - `parsePresets(data)` — validates and returns typed presets from raw YAML data. Checks types, non-empty array, positive integers, etc.
-- `PRESETS` — the exported preset array, loaded from the YAML file at build time
+- `DEFAULT_PRESETS` — build-time preset array, compiled from `presets.yml`
+- `fetchPresets()` — async function that fetches runtime presets from the server
 
 ### Cycling Logic (`src/routes/+page.svelte`)
 
+- `presets` reactive state, initialized with `DEFAULT_PRESETS`, updated on mount if runtime fetch succeeds
 - `presetIndex` state tracks the current preset (starts at 0)
 - `applyPreset(index)` sets `duration`, `rest`, `reps` from the preset and calls `timer.configure()`
 - `cyclePreset(direction)` increments/decrements the index with modular wrapping
