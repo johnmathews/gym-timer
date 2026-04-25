@@ -26,3 +26,17 @@ that expanded container.
 - Play button and time both scaled up 10%
 
 The play button and total time are now a tight centered group in both layouts.
+
+## Lint cleanup
+
+Resolved all 31 `@typescript-eslint/no-explicit-any` warnings across 4 files:
+
+- **FullscreenButton.svelte / +page.svelte**: Replaced `as any` casts for
+  vendor-prefixed fullscreen APIs with typed interfaces (`WebkitDocument`,
+  `WebkitElement`, `StandaloneNavigator`)
+- **timer.ts**: Replaced `navigator as any` with an inline intersection type
+  for `audioSession`
+- **timer.test.ts**: Consolidated 20 test mock `any` usages into a single
+  `type MockAny = any` with one eslint-disable comment
+
+ESLint now reports 0 warnings.

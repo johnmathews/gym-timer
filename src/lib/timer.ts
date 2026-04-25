@@ -513,7 +513,7 @@ export function resumeAudioContext(): void {
   // Safari fully initialises the audio session.
   if (!_audioSessionUnlocked) {
     try {
-      const nav = navigator as any;
+      const nav = navigator as Navigator & { audioSession?: { type: string } };
       if (nav.audioSession) {
         nav.audioSession.type = "ambient";
       }

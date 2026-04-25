@@ -26,6 +26,15 @@
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
  import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
 
+ interface WebkitDocument extends Document {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => void;
+ }
+
+ interface WebkitElement extends HTMLElement {
+  webkitRequestFullscreen?: () => void;
+ }
+
  const timer = createTimer();
  const { remaining, status, phase, currentRep, totalReps } = timer;
 
@@ -344,10 +353,11 @@
   // F for fullscreen works everywhere
   if (e.key === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
    e.preventDefault();
-   const el = document.documentElement as any;
-   if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
-    if (document.exitFullscreen) document.exitFullscreen();
-    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+   const el = document.documentElement as WebkitElement;
+   const doc = document as WebkitDocument;
+   if (document.fullscreenElement || doc.webkitFullscreenElement) {
+    if (doc.exitFullscreen) doc.exitFullscreen();
+    else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
    } else {
     if (el.requestFullscreen) el.requestFullscreen();
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();

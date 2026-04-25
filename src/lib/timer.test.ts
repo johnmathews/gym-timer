@@ -1588,12 +1588,15 @@ describe("toggleMute", () => {
   });
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mocks for Web Audio API
+type MockAny = any;
+
 describe("sound playback", () => {
-  let mockOscillator: any;
-  let mockGain: any;
-  let mockCompressor: any;
-  let mockCtx: any;
-  let OriginalAudioContext: any;
+  let mockOscillator: MockAny;
+  let mockGain: MockAny;
+  let mockCompressor: MockAny;
+  let mockCtx: MockAny;
+  let OriginalAudioContext: MockAny;
 
   beforeEach(() => {
     resetAudioContext();
@@ -1633,8 +1636,8 @@ describe("sound playback", () => {
       resume: vi.fn(),
       close: vi.fn(),
     };
-    OriginalAudioContext = (window as any).AudioContext;
-    (window as any).AudioContext = vi.fn(function(this: any) {
+    OriginalAudioContext = (window as MockAny).AudioContext;
+    (window as MockAny).AudioContext = vi.fn(function(this: MockAny) {
       return Object.assign(this, mockCtx);
     });
     vi.useFakeTimers();
@@ -1644,9 +1647,9 @@ describe("sound playback", () => {
     vi.useRealTimers();
     resetAudioContext();
     if (OriginalAudioContext) {
-      (window as any).AudioContext = OriginalAudioContext;
+      (window as MockAny).AudioContext = OriginalAudioContext;
     } else {
-      delete (window as any).AudioContext;
+      delete (window as MockAny).AudioContext;
     }
   });
 
@@ -1777,8 +1780,8 @@ describe("sound playback", () => {
 });
 
 describe("audio session unlock", () => {
-  let mockCtx: any;
-  let mockAudioPlay: any;
+  let mockCtx: MockAny;
+  let mockAudioPlay: MockAny;
 
   beforeEach(() => {
     resetAudioContext();
@@ -1790,12 +1793,12 @@ describe("audio session unlock", () => {
       createGain: vi.fn(),
       resume: vi.fn(),
     };
-    (window as any).AudioContext = vi.fn(function(this: any) {
+    (window as MockAny).AudioContext = vi.fn(function(this: MockAny) {
       return Object.assign(this, mockCtx);
     });
 
     mockAudioPlay = vi.fn(() => Promise.resolve());
-    vi.stubGlobal("Audio", vi.fn(function(this: any) {
+    vi.stubGlobal("Audio", vi.fn(function(this: MockAny) {
       this.play = mockAudioPlay;
       return this;
     }));
@@ -1804,13 +1807,13 @@ describe("audio session unlock", () => {
   afterEach(() => {
     resetAudioContext();
     vi.unstubAllGlobals();
-    delete (navigator as any).audioSession;
+    delete (navigator as MockAny).audioSession;
   });
 
   it("plays silent WAV via Audio element to unlock iOS audio session", () => {
     resumeAudioContext();
-    expect((window as any).Audio).toHaveBeenCalled();
-    const src = (window as any).Audio.mock.calls[0][0];
+    expect((window as MockAny).Audio).toHaveBeenCalled();
+    const src = (window as MockAny).Audio.mock.calls[0][0];
     expect(src).toContain("data:audio/wav;base64,");
     expect(mockAudioPlay).toHaveBeenCalled();
   });
@@ -1832,13 +1835,13 @@ describe("audio session unlock", () => {
 
   it("sets navigator.audioSession.type to ambient when available", () => {
     const mockSession = { type: "playback" };
-    (navigator as any).audioSession = mockSession;
+    (navigator as MockAny).audioSession = mockSession;
     resumeAudioContext();
     expect(mockSession.type).toBe("ambient");
   });
 
   it("does not throw when navigator.audioSession is unavailable", () => {
-    delete (navigator as any).audioSession;
+    delete (navigator as MockAny).audioSession;
     expect(() => resumeAudioContext()).not.toThrow();
   });
 });

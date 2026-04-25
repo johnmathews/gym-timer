@@ -7,9 +7,22 @@
   let showHint = $state(false);
   let hintTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  interface WebkitDocument extends Document {
+    webkitFullscreenElement?: Element | null;
+    webkitExitFullscreen?: () => void;
+  }
+
+  interface WebkitElement extends HTMLElement {
+    webkitRequestFullscreen?: () => void;
+  }
+
+  interface StandaloneNavigator extends Navigator {
+    standalone?: boolean;
+  }
+
   function getFullscreenElement(): Element | null {
     return document.fullscreenElement
-      || (document as any).webkitFullscreenElement
+      || (document as WebkitDocument).webkitFullscreenElement
       || null;
   }
 
@@ -18,10 +31,10 @@
   }
 
   onMount(() => {
-    const el = document.documentElement as any;
+    const el = document.documentElement as WebkitElement;
     canFullscreen = !!(el.requestFullscreen || el.webkitRequestFullscreen);
     isFullscreen = !!getFullscreenElement();
-    isStandalone = (navigator as any).standalone === true
+    isStandalone = (navigator as StandaloneNavigator).standalone === true
       || window.matchMedia("(display-mode: standalone)").matches;
     document.addEventListener("fullscreenchange", handleChange);
     document.addEventListener("webkitfullscreenchange", handleChange);
@@ -43,13 +56,14 @@
       return;
     }
     if (isFullscreen) {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
+      const doc = document as WebkitDocument;
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
       }
     } else {
-      const el = document.documentElement as any;
+      const el = document.documentElement as WebkitElement;
       if (el.requestFullscreen) {
         el.requestFullscreen();
       } else if (el.webkitRequestFullscreen) {
