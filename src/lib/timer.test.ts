@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, toggleMute, playFinishSound, playRestStartSound, playWorkStartSound, playPauseSound, playResumeSound, playCountdownDing, resetAudioContext, resumeAudioContext } from "./timer";
+import { formatTime, totalSeconds, createTimer, GET_READY_DURATION, getMasterVolume, setMasterVolume, MAX_VOLUME, initVolume, toggleMute, playFinishSound, playRestStartSound, playWorkStartSound, playPauseSound, playResumeSound, playCountdownDing, resetAudioContext, resumeAudioContext, warmAudioContext, startKeepAlive, stopKeepAlive } from "./timer";
 import { get } from "svelte/store";
 
 describe("formatTime", () => {
@@ -1444,6 +1444,58 @@ describe("addRep and removeRep", () => {
   });
 });
 
+describe("timer edge cases (coverage)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("skipBackward past all segments seeks to last segment", () => {
+    const timer = createTimer();
+    timer.configure(2, 0, 1);
+    timer.start();
+
+    // Advance past the entire workout (getReady + work)
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    // skipBackward on finished is a no-op
+    timer.skipBackward();
+    expect(get(timer.status)).toBe("finished");
+
+    timer.destroy();
+  });
+
+  it("addRep is a no-op when finished", () => {
+    const timer = createTimer();
+    timer.configure(2, 0, 1);
+    timer.start();
+    vi.advanceTimersByTime((GET_READY_DURATION + 2) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.addRep();
+    expect(get(timer.totalReps)).toBe(1);
+
+    timer.destroy();
+  });
+
+  it("removeRep is a no-op when finished", () => {
+    const timer = createTimer();
+    timer.configure(2, 0, 2);
+    timer.start();
+    vi.advanceTimersByTime((GET_READY_DURATION + 4) * 1000);
+    expect(get(timer.status)).toBe("finished");
+
+    timer.removeRep();
+    expect(get(timer.totalReps)).toBe(2);
+
+    timer.destroy();
+  });
+});
+
 describe("default volume", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -1843,5 +1895,224 @@ describe("audio session unlock", () => {
   it("does not throw when navigator.audioSession is unavailable", () => {
     delete (navigator as MockAny).audioSession;
     expect(() => resumeAudioContext()).not.toThrow();
+  });
+
+  it("resumes suspended AudioContext in resumeAudioContext", () => {
+    mockCtx.state = "suspended";
+    resumeAudioContext();
+    expect(mockCtx.resume).toHaveBeenCalled();
+  });
+});
+
+describe("warmAudioContext", () => {
+  let mockCtx: MockAny;
+
+  beforeEach(() => {
+    resetAudioContext();
+    mockCtx = {
+      currentTime: 0,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(),
+      createGain: vi.fn(),
+      resume: vi.fn(),
+    };
+    (window as MockAny).AudioContext = vi.fn(function(this: MockAny) {
+      return Object.assign(this, mockCtx);
+    });
+    vi.stubGlobal("Audio", vi.fn(function(this: MockAny) {
+      this.play = vi.fn(() => Promise.resolve());
+      return this;
+    }));
+  });
+
+  afterEach(() => {
+    resetAudioContext();
+    vi.unstubAllGlobals();
+  });
+
+  it("resumes a suspended AudioContext", () => {
+    mockCtx.state = "suspended";
+    warmAudioContext();
+    expect(mockCtx.resume).toHaveBeenCalled();
+  });
+
+  it("does not resume an already running AudioContext", () => {
+    mockCtx.state = "running";
+    warmAudioContext();
+    expect(mockCtx.resume).not.toHaveBeenCalled();
+  });
+
+  it("resets unlock flag and calls resumeAudioContext", () => {
+    warmAudioContext();
+    // Should have attempted to play the silent WAV (via resumeAudioContext)
+    expect((window as MockAny).Audio).toHaveBeenCalled();
+  });
+});
+
+describe("startKeepAlive / stopKeepAlive", () => {
+  let mockCtx: MockAny;
+  let mockOscillator: MockAny;
+  let mockGain: MockAny;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    resetAudioContext();
+    mockOscillator = {
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    mockGain = {
+      connect: vi.fn(),
+      gain: { value: 1.0 },
+    };
+    mockCtx = {
+      currentTime: 0,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(() => mockOscillator),
+      createGain: vi.fn(() => mockGain),
+      resume: vi.fn(),
+    };
+    (window as MockAny).AudioContext = vi.fn(function(this: MockAny) {
+      return Object.assign(this, mockCtx);
+    });
+  });
+
+  afterEach(() => {
+    stopKeepAlive();
+    resetAudioContext();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("plays a silent oscillator every 30 seconds", () => {
+    startKeepAlive();
+    vi.advanceTimersByTime(30000);
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockOscillator.start).toHaveBeenCalled();
+    expect(mockOscillator.stop).toHaveBeenCalled();
+    expect(mockGain.gain.value).toBe(0);
+  });
+
+  it("resumes suspended context during keep-alive tick", () => {
+    startKeepAlive();
+    mockCtx.state = "suspended";
+    vi.advanceTimersByTime(30000);
+    expect(mockCtx.resume).toHaveBeenCalled();
+  });
+
+  it("does not start duplicate keep-alive intervals", () => {
+    startKeepAlive();
+    startKeepAlive(); // second call should be a no-op
+    vi.advanceTimersByTime(30000);
+    // Only one oscillator per tick, not two
+    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(1);
+  });
+
+  it("stopKeepAlive clears the interval", () => {
+    startKeepAlive();
+    stopKeepAlive();
+    vi.advanceTimersByTime(60000);
+    expect(mockCtx.createOscillator).not.toHaveBeenCalled();
+  });
+
+  it("stopKeepAlive is safe to call when not running", () => {
+    expect(() => stopKeepAlive()).not.toThrow();
+  });
+});
+
+describe("playPauseSound / playResumeSound with compressor", () => {
+  let mockOscillator: MockAny;
+  let mockGain: MockAny;
+  let mockCompressor: MockAny;
+  let mockCtx: MockAny;
+
+  beforeEach(() => {
+    resetAudioContext();
+    mockOscillator = {
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      type: "",
+      frequency: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+    };
+    mockGain = {
+      connect: vi.fn(),
+      gain: {
+        value: 1.0,
+        cancelScheduledValues: vi.fn(),
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+    };
+    mockCompressor = {
+      connect: vi.fn(),
+      threshold: { value: 0 },
+      knee: { value: 0 },
+      ratio: { value: 0 },
+      attack: { value: 0 },
+      release: { value: 0 },
+    };
+    mockCtx = {
+      currentTime: 0,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(() => mockOscillator),
+      createGain: vi.fn(() => mockGain),
+      createDynamicsCompressor: vi.fn(() => mockCompressor),
+      resume: vi.fn(),
+    };
+    (window as MockAny).AudioContext = vi.fn(function(this: MockAny) {
+      return Object.assign(this, mockCtx);
+    });
+  });
+
+  afterEach(() => {
+    resetAudioContext();
+    vi.unstubAllGlobals();
+  });
+
+  it("playPauseSound uses compressor when volume > 1.0", () => {
+    setMasterVolume(5.0);
+    playPauseSound();
+    expect(mockCtx.createDynamicsCompressor).toHaveBeenCalled();
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCompressor);
+  });
+
+  it("playPauseSound connects directly when volume <= 1.0", () => {
+    setMasterVolume(0.5);
+    playPauseSound();
+    expect(mockCtx.createDynamicsCompressor).not.toHaveBeenCalled();
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCtx.destination);
+  });
+
+  it("playPauseSound resumes suspended context", () => {
+    setMasterVolume(5.0);
+    mockCtx.state = "suspended";
+    playPauseSound();
+    expect(mockCtx.resume).toHaveBeenCalled();
+  });
+
+  it("playResumeSound uses compressor when volume > 1.0", () => {
+    setMasterVolume(5.0);
+    playResumeSound();
+    expect(mockCtx.createDynamicsCompressor).toHaveBeenCalled();
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCompressor);
+  });
+
+  it("playResumeSound connects directly when volume <= 1.0", () => {
+    setMasterVolume(0.5);
+    playResumeSound();
+    expect(mockCtx.createDynamicsCompressor).not.toHaveBeenCalled();
+    expect(mockGain.connect).toHaveBeenCalledWith(mockCtx.destination);
+  });
+
+  it("playResumeSound resumes suspended context", () => {
+    setMasterVolume(5.0);
+    mockCtx.state = "suspended";
+    playResumeSound();
+    expect(mockCtx.resume).toHaveBeenCalled();
   });
 });
