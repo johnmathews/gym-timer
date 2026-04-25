@@ -878,7 +878,7 @@
 
   .home {
    display: grid;
-   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+   grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
    grid-template-rows: auto 1fr;
    gap: 0 clamp(40px, 5vw, 80px);
    flex: 1;
@@ -926,13 +926,13 @@
   }
 
   .home :global(.total-time-display .play-btn) {
-   width: clamp(80px, 10vw, 160px);
+   width: clamp(88px, 11vw, 176px);
   }
 
   .home :global(.total-time-display .time) {
-   flex: 1;
-   min-width: 0;
-   font-size: clamp(7rem, 12vw, 20rem);
+   flex: none;
+   font-size: clamp(7.7rem, 13.2vw, 22rem);
+   text-align: center;
   }
 
   .toolbar :global(svg) {
@@ -1002,17 +1002,17 @@
 
   .home :global(.total-time-display .row) {
    justify-content: center;
-   gap: 20px;
+   gap: 16px;
   }
 
   .home :global(.total-time-display .play-btn) {
-   width: min(10vw, 5rem);
+   width: min(8vw, 4.5rem);
   }
 
   .home :global(.total-time-display .time) {
-   flex: 1;
-   min-width: 0;
-   font-size: min(13vw, 7rem);
+   flex: none;
+   font-size: min(15vw, 8rem);
+   text-align: center;
   }
  }
 </style>
