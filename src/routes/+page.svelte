@@ -231,7 +231,7 @@
  }
 
  function cyclePreset(direction: 1 | -1) {
-  presetIndex = ((presetIndex + direction) % presets.length + presets.length) % presets.length;
+  presetIndex = (((presetIndex + direction) % presets.length) + presets.length) % presets.length;
   applyPreset(presetIndex);
  }
 
@@ -926,12 +926,12 @@
   }
 
   .home :global(.total-time-display .play-btn) {
-   width: clamp(88px, 11vw, 176px);
+   width: clamp(105px, 14vw, 215px);
   }
 
   .home :global(.total-time-display .time) {
    flex: none;
-   font-size: clamp(7.7rem, 13.2vw, 22rem);
+   font-size: clamp(10rem, 16vw, 30rem);
    text-align: center;
   }
 
