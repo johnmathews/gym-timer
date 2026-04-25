@@ -140,7 +140,7 @@ Current presets:
 1. Work 60s, Rest 0s, Reps 10 (default)
 2. Work 30s, Rest 15s, Reps 10
 
-Swipe handling on the home screen excludes buttons, toolbar, and config cards from swipe capture to avoid interfering with tap-to-open-picker behavior.
+Swipe handling on the home screen excludes only the toolbar (volume, fullscreen) from swipe capture. Config cards participate in the gesture so swipes that begin on a card still cycle presets — the synthesized click that follows a swipe is consumed by a capture-phase click handler on `.home`, so the picker only opens on a real tap.
 
 ## Config Cards
 

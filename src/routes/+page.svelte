@@ -248,20 +248,34 @@
  let homeSwipeStartX = 0;
  let homeSwipeStartY = 0;
  let homeSwipePointerId = -1;
+ let homePointerCaptured = false;
+ let suppressNextHomeClick = false;
 
  function handleHomePointerDown(e: PointerEvent) {
-  if ((e.target as HTMLElement).closest("button")) return;
+  // Toolbar buttons (volume, fullscreen) keep tap-only behaviour;
+  // ConfigCards intentionally participate so swipes that start on a card cycle presets.
   if ((e.target as HTMLElement).closest(".toolbar")) return;
-  if ((e.target as HTMLElement).closest(".config-card")) return;
   homeSwipeStartX = e.clientX;
   homeSwipeStartY = e.clientY;
   homeSwipePointerId = e.pointerId;
-  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  homePointerCaptured = false;
+  // Do NOT setPointerCapture here — that would redirect the synthesized click
+  // away from the ConfigCard button, breaking tap-to-open-picker. We only
+  // capture once movement clearly indicates a drag (see handleHomePointerMove).
+ }
+
+ function handleHomePointerMove(e: PointerEvent) {
+  if (e.pointerId !== homeSwipePointerId || homePointerCaptured) return;
+  if (Math.abs(e.clientX - homeSwipeStartX) > 10) {
+   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+   homePointerCaptured = true;
+  }
  }
 
  function handleHomePointerUp(e: PointerEvent) {
   if (e.pointerId !== homeSwipePointerId) return;
   homeSwipePointerId = -1;
+  homePointerCaptured = false;
 
   const deltaX = e.clientX - homeSwipeStartX;
   const deltaY = e.clientY - homeSwipeStartY;
@@ -272,6 +286,19 @@
    } else {
     cyclePreset(-1);
    }
+   // Stop the synthesized click that follows pointerup from opening a picker.
+   suppressNextHomeClick = true;
+   setTimeout(() => {
+    suppressNextHomeClick = false;
+   }, 0);
+  }
+ }
+
+ function handleHomeClickCapture(e: MouseEvent) {
+  if (suppressNextHomeClick) {
+   suppressNextHomeClick = false;
+   e.stopPropagation();
+   e.preventDefault();
   }
  }
 
@@ -463,7 +490,13 @@
  {#if $status === "idle" && !activePicker}
   <!-- Idle: show config cards + total time -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="home" onpointerdown={handleHomePointerDown} onpointerup={handleHomePointerUp}>
+  <div
+   class="home"
+   onpointerdown={handleHomePointerDown}
+   onpointermove={handleHomePointerMove}
+   onpointerup={handleHomePointerUp}
+   onclickcapture={handleHomeClickCapture}
+  >
    <div class="cards">
     <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />

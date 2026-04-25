@@ -64,7 +64,7 @@ volumes:
 - `cyclePreset(direction)` increments/decrements the index with modular wrapping
 - Home screen swipe handling uses pointer events (50px threshold) with `touch-action: pan-y` on the `.home` element for iOS compatibility
 - Left/Right arrow keys cycle presets when `$status === "idle"` and no picker is open
-- Config cards, toolbar, and buttons are excluded from swipe detection
+- Only the toolbar (volume, fullscreen) is excluded from swipe detection. Config cards participate in swipe capture, and a synthesized click on a card following a swipe is suppressed via a capture-phase click handler so the picker does not open.
 
 ### Dot Indicator
 

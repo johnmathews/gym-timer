@@ -1215,6 +1215,32 @@ test.describe("Keyboard shortcuts", () => {
     await expect(dots.nth(1)).toHaveClass(/active/);
   });
 
+  test("horizontal swipe starting on a config card cycles preset without opening picker", async ({
+    page,
+  }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+
+    // Start the gesture on the Work card and drag left ~80px — beyond the 50px swipe threshold.
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx + 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx - 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    // Preset cycled to second preset (Test Intervals: work=0:30, rest=0:15).
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
+
+    // The synthesized click on the card must NOT open the RulerPicker.
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
   test("H returns to home screen when finished", async ({ page }) => {
     await page.getByTestId("config-card-work").click();
     await page.getByTestId("ruler-tick-5").click({ force: true });
