@@ -203,7 +203,7 @@
   const deltaX = e.clientX - swipeStartX;
   const deltaY = e.clientY - swipeStartY;
 
-  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+  if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < Math.max(100, Math.abs(deltaX) * 1.5)) {
    resumeAudioContext();
    if (deltaX < 0) {
     timer.skipForward();
@@ -280,11 +280,12 @@
   const deltaX = e.clientX - homeSwipeStartX;
   const deltaY = e.clientY - homeSwipeStartY;
 
-  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+  if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < Math.max(100, Math.abs(deltaX) * 1.5)) {
+   // Drag-to-pan semantics, matches ArrowLeft/Right: swipe right → next, swipe left → previous.
    if (deltaX < 0) {
-    cyclePreset(1);
-   } else {
     cyclePreset(-1);
+   } else {
+    cyclePreset(1);
    }
    // Stop the synthesized click that follows pointerup from opening a picker.
    suppressNextHomeClick = true;

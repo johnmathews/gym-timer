@@ -816,15 +816,15 @@ test.describe("Timer", () => {
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
 
-    // Swipe diagonally with more vertical than horizontal movement
-    // abs(deltaX) > 50 but abs(deltaY) > abs(deltaX) → should NOT skip
+    // Swipe with vertical drift exceeding max(100, |deltaX| * 1.5).
+    // deltaX = 60, deltaY = -150: 150 > max(100, 90) = 100 → should NOT skip.
     const screen = page.getByTestId("active-screen");
     const box = await screen.boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.mouse.move(cx + 60, cy - 80, { steps: 5 });
+    await page.mouse.move(cx + 60, cy - 150, { steps: 5 });
     await page.mouse.up();
 
     // Should have paused (tap behavior), NOT skipped to work
@@ -1188,16 +1188,19 @@ test.describe("Keyboard shortcuts", () => {
   });
 
   test("ArrowLeft cycles to previous preset on idle screen", async ({ page }) => {
-    // From default (index 0), ArrowLeft wraps to last preset (index 1)
+    // From default (index 0), ArrowLeft wraps to last preset (index 2 = Test HIIT)
     await page.keyboard.press("ArrowLeft");
-    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
-    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:10");
   });
 
   test("preset cycling wraps around", async ({ page }) => {
-    // Press ArrowRight twice — should wrap back to first preset
+    // Press ArrowRight three times — should wrap back to first preset
     await page.keyboard.press("ArrowRight");
     await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
 
     await page.keyboard.press("ArrowRight");
     await expect(page.getByTestId("config-card-work")).toContainText("1:00");
@@ -1206,39 +1209,81 @@ test.describe("Keyboard shortcuts", () => {
 
   test("preset dot indicator shows active preset", async ({ page }) => {
     const dots = page.getByTestId("preset-dots").locator(".dot");
-    await expect(dots).toHaveCount(2);
+    await expect(dots).toHaveCount(3);
     await expect(dots.nth(0)).toHaveClass(/active/);
     await expect(dots.nth(1)).not.toHaveClass(/active/);
+    await expect(dots.nth(2)).not.toHaveClass(/active/);
 
     await page.keyboard.press("ArrowRight");
     await expect(dots.nth(0)).not.toHaveClass(/active/);
     await expect(dots.nth(1)).toHaveClass(/active/);
   });
 
-  test("horizontal swipe starting on a config card cycles preset without opening picker", async ({
-    page,
-  }) => {
+  // Regression: swipe direction must match drag-to-pan / arrow-key semantics.
+  // Bug history: commit 7257daa fixed it, then 194aaf6 reversed it again citing
+  // "iOS convention." With only 2 presets in the fixture, wraparound made both
+  // directions land on the same index, so the regression slipped past the test.
+  // The 3-preset fixture makes direction observable.
+  test("home swipe right cycles to NEXT preset", async ({ page }) => {
     const dots = page.getByTestId("preset-dots").locator(".dot");
     await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
 
-    // Start the gesture on the Work card and drag left ~80px — beyond the 50px swipe threshold.
     const card = page.getByTestId("config-card-work");
     const box = await card.boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
+    // Drag right ~80px (deltaX = +80) — should advance to next preset (index 1).
+    await page.mouse.move(cx - 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
+  test("home swipe left cycles to PREVIOUS preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    // Drag left ~80px (deltaX = -80) — should wrap to last preset (index 2 = Test HIIT).
     await page.mouse.move(cx + 40, cy);
     await page.mouse.down();
     await page.mouse.move(cx - 40, cy, { steps: 5 });
     await page.mouse.up();
 
-    // Preset cycled to second preset (Test Intervals: work=0:30, rest=0:15).
+    await expect(dots.nth(2)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:10");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
+  test("home swipe registers despite vertical drift", async ({ page }) => {
+    // A swipe in landscape mode often drifts vertically; the gesture should
+    // still cycle the preset as long as horizontal motion dominates within
+    // the forgiving |deltaY| < max(100, |deltaX| * 1.5) bound.
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    // deltaX = +80 (right swipe), deltaY = +70 — would be rejected under the
+    // old |deltaX| > |deltaY| rule, but should pass with the looser tolerance.
+    await page.mouse.move(cx - 40, cy - 35);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy + 35, { steps: 5 });
+    await page.mouse.up();
+
     await expect(dots.nth(1)).toHaveClass(/active/);
     await expect(page.getByTestId("config-card-work")).toContainText("0:30");
-    await expect(page.getByTestId("config-card-rest")).toContainText("0:15");
-
-    // The synthesized click on the card must NOT open the RulerPicker.
-    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
   });
 
   test("H returns to home screen when finished", async ({ page }) => {

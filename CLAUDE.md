@@ -22,9 +22,9 @@
 - `src/lib/presets.ts` — exports `DEFAULT_PRESETS` (build-time), `fetchPresets()` (runtime from `/presets.yml`), `parsePresets()` (validation)
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList, KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
-- `src/lib/timer.test.ts` — 115 unit tests
+- `src/lib/timer.test.ts` — 133 unit tests
 - `src/lib/presets.test.ts` — 24 preset/parsePresets/fetchPresets tests
-- `tests/timer.test.ts` — 89 e2e tests (Playwright)
+- `tests/timer.test.ts` — 92 e2e tests (Playwright)
 - `tests/fixtures/presets.yml` — test preset fixture (isolates tests from production presets.yml changes)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 

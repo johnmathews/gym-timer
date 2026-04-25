@@ -7,3 +7,8 @@
   work: 30
   rest: 15
   reps: 10
+
+- name: Test HIIT
+  work: 45
+  rest: 10
+  reps: 8
