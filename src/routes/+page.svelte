@@ -251,37 +251,6 @@
  let homePointerCaptured = false;
  let suppressNextHomeClick = false;
 
- // Trackpad 2-finger horizontal swipe on home screen.
- // We fire only on a wheel event that follows a real idle gap from any
- // prior wheel event AND has a meaningful magnitude. Mac trackpad
- // inertia emits a long burst of decaying events at <100ms intervals,
- // so every inertia event falls inside the gap and is dropped. The
- // user's next gesture starts after the inertia ends — its first
- // event has a large gap and high magnitude, and fires once.
- // Sentinel makes the first wheel event after page load see an effectively
- // infinite gap (it follows no prior gesture).
- let lastWheelTime = Number.NEGATIVE_INFINITY;
- const WHEEL_QUIET_MS = 200;
- const WHEEL_MIN_MAG = 25;
-
- function handleHomeWheel(e: WheelEvent) {
-  // Only act on horizontal-dominant gestures; let vertical scroll pass through.
-  if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-  e.preventDefault();
-
-  const now = performance.now();
-  const gap = now - lastWheelTime;
-  lastWheelTime = now;
-
-  if (gap < WHEEL_QUIET_MS) return;
-  if (Math.abs(e.deltaX) < WHEEL_MIN_MAG) return;
-
-  // Mac default (natural scrolling): finger-right → deltaX < 0.
-  // Match touch drag-to-pan: physical finger-right = next preset.
-  if (e.deltaX < 0) cyclePreset(1);
-  else cyclePreset(-1);
- }
-
  function handleHomePointerDown(e: PointerEvent) {
   // Toolbar buttons (volume, fullscreen) keep tap-only behaviour;
   // ConfigCards intentionally participate so swipes that start on a card cycle presets.
@@ -527,7 +496,6 @@
    onpointerdown={handleHomePointerDown}
    onpointermove={handleHomePointerMove}
    onpointerup={handleHomePointerUp}
-   onwheel={handleHomeWheel}
    onclickcapture={handleHomeClickCapture}
   >
    <div class="cards">

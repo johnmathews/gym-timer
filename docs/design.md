@@ -129,8 +129,7 @@ The `?` key opens a modal overlay listing all available shortcuts. It works from
 
 The home screen supports cycling through preset timer configurations:
 
-- **Touch**: Drag-to-pan semantics — swipe right = next preset, swipe left = previous preset (50px threshold, matches the Right/Left arrow keys)
-- **Trackpad (laptop)**: 2-finger horizontal swipe on the home screen. Wheel `deltaX` is accumulated until it crosses 60px, then the preset cycles once and the gesture is locked until 150ms of inactivity. With macOS natural scrolling on (default), physical finger-right produces `deltaX < 0` and advances to the next preset, matching the touch and arrow-key direction. Vertical-dominant scrolls are ignored.
+- **Touch**: Swipe left = next preset, swipe right = previous preset (matches iOS carousel convention and the active screen's skip direction; same 50px threshold)
 - **Keyboard**: Left/Right arrow keys when on the idle home screen (no picker open)
 - The list wraps around in both directions
 - A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)
