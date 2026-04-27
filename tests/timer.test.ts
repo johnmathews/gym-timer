@@ -1296,11 +1296,8 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
   });
 
-  // Regression: with the original setTimeout-based release, every wheel
-  // event reset the 150ms idle timer, so on a real Mac trackpad the lock
-  // stayed on for the full inertia tail (~1s) and blocked every swipe
-  // after the first. Now the lock has a hard 350ms ceiling AND releases
-  // on a 100ms idle gap.
+  // Regression: with the original setTimeout-based release the lock got
+  // pinned by the inertia trail and blocked every swipe after the first.
   test("home wheel cycles repeatedly when separated by an idle gap", async ({ page }) => {
     const dots = page.getByTestId("preset-dots").locator(".dot");
     await expect(dots.nth(0)).toHaveClass(/active/);
@@ -1312,13 +1309,37 @@ test.describe("Keyboard shortcuts", () => {
     await page.mouse.wheel(-80, 0);
     await expect(dots.nth(1)).toHaveClass(/active/);
 
-    await page.clock.fastForward(150);
+    await page.clock.fastForward(350);
     await page.mouse.wheel(-80, 0);
     await expect(dots.nth(2)).toHaveClass(/active/);
 
-    await page.clock.fastForward(150);
+    await page.clock.fastForward(350);
     await page.mouse.wheel(-80, 0);
     await expect(dots.nth(0)).toHaveClass(/active/);
+  });
+
+  // Regression: a hard swipe was firing 2-3 times because the lock
+  // released mid-inertia and the decaying tail re-crossed the threshold.
+  // The fresh-gesture gate filters the inertia tail.
+  test("home wheel fires once for a hard swipe with inertia tail", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+
+    // Initial peak then decaying inertia events at ~30ms intervals.
+    // Cumulative deltaX ≈ -276 — without inertia handling this would
+    // fire 4+ times.
+    const trail = [-45, -40, -35, -30, -25, -20, -15, -12, -10, -8, -6, -4, -3, -2, -1];
+    for (let i = 0; i < trail.length; i++) {
+      if (i > 0) await page.clock.fastForward(30);
+      await page.mouse.wheel(trail[i], 0);
+    }
+
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(dots.nth(2)).not.toHaveClass(/active/);
   });
 
   test("home vertical wheel does not cycle preset", async ({ page }) => {

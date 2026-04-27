@@ -252,18 +252,20 @@
  let suppressNextHomeClick = false;
 
  // Trackpad 2-finger horizontal swipe on home screen.
- // Lock is released on either a 100ms idle gap (clean gesture end) OR a
- // hard 350ms ceiling. The ceiling matters: Mac trackpad inertia keeps
- // emitting wheel events for ~1s after the physical swipe ends, so an
- // idle-only release stays pinned until the trail finishes and blocks
- // subsequent swipes attempted before then.
+ // After firing we hold a hard cooldown (events discarded), then the
+ // first post-cooldown event is gated by a freshness check: either a
+ // real idle gap (>=80ms with no events — the normal between-gestures
+ // pause) or a single-event magnitude consistent with a new push
+ // (>=30px). Decaying inertia at the cooldown boundary is below both,
+ // so it gets filtered and a hard swipe still fires exactly once.
  let wheelAccumX = 0;
- let wheelLocked = false;
- let wheelLockedAt = 0;
+ let wheelLockedUntil = 0;
  let lastWheelTime = 0;
+ let wheelNeedsFresh = false;
  const WHEEL_THRESHOLD = 60;
- const WHEEL_GAP_MS = 100;
- const WHEEL_MAX_LOCK_MS = 350;
+ const WHEEL_COOLDOWN_MS = 300;
+ const WHEEL_FRESH_GAP_MS = 80;
+ const WHEEL_FRESH_MAG = 30;
 
  function handleHomeWheel(e: WheelEvent) {
   // Only act on horizontal-dominant gestures; let vertical scroll pass through.
@@ -271,15 +273,24 @@
   e.preventDefault();
 
   const now = performance.now();
-  const gapElapsed = now - lastWheelTime > WHEEL_GAP_MS;
-  const lockExpired = wheelLocked && now - wheelLockedAt > WHEEL_MAX_LOCK_MS;
-  if (gapElapsed || lockExpired) {
-   wheelAccumX = 0;
-   wheelLocked = false;
-  }
+  const gap = now - lastWheelTime;
+  const mag = Math.abs(e.deltaX);
   lastWheelTime = now;
 
-  if (wheelLocked) return;
+  // Hard cooldown after firing — every event in this window is inertia.
+  if (now < wheelLockedUntil) {
+   wheelAccumX = 0;
+   wheelNeedsFresh = true;
+   return;
+  }
+
+  // First event past cooldown must look like a real new gesture.
+  if (wheelNeedsFresh) {
+   if (gap < WHEEL_FRESH_GAP_MS && mag < WHEEL_FRESH_MAG) return;
+   wheelNeedsFresh = false;
+   wheelAccumX = 0;
+  }
+
   wheelAccumX += e.deltaX;
   if (Math.abs(wheelAccumX) <= WHEEL_THRESHOLD) return;
 
@@ -288,9 +299,9 @@
   if (wheelAccumX < 0) cyclePreset(1);
   else cyclePreset(-1);
 
-  wheelLocked = true;
-  wheelLockedAt = now;
+  wheelLockedUntil = now + WHEEL_COOLDOWN_MS;
   wheelAccumX = 0;
+  wheelNeedsFresh = false;
  }
 
  function handleHomePointerDown(e: PointerEvent) {
