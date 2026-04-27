@@ -1264,6 +1264,87 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
   });
 
+  // Trackpad 2-finger horizontal swipe via wheel-gestures library.
+  // Mac default natural-scrolling: physical finger-right produces
+  // deltaX < 0 → next preset (matches touch drag-to-pan and arrow keys).
+  test("home wheel deltaX < 0 (finger-right) cycles to NEXT preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(-80, 0);
+
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
+  test("home wheel deltaX > 0 (finger-left) cycles to PREVIOUS preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(80, 0);
+
+    await expect(dots.nth(2)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+  });
+
+  test("home wheel cycles repeatedly when separated by an idle gap", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(1)).toHaveClass(/active/);
+
+    // Gap longer than wheel-gestures' willEndTimeout (~150ms default) so the
+    // next event is treated as the start of a new gesture.
+    await page.clock.fastForward(500);
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(2)).toHaveClass(/active/);
+
+    await page.clock.fastForward(500);
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(0)).toHaveClass(/active/);
+  });
+
+  // wheel-gestures marks decaying events as isMomentum and our handler
+  // ignores them — the regression we kept reintroducing in the hand-rolled
+  // attempts (multi-cycle from a single hard swipe).
+  test("home wheel fires once for a hard swipe with inertia tail", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+
+    // Peak then monotonic decay at ~16ms intervals — matches recorded Mac
+    // trackpad traces. Cumulative deltaX ≈ -276 over 240ms.
+    const trail = [-45, -40, -35, -30, -25, -20, -15, -12, -10, -8, -6, -4, -3, -2, -1];
+    for (let i = 0; i < trail.length; i++) {
+      if (i > 0) await page.clock.fastForward(16);
+      await page.mouse.wheel(trail[i], 0);
+    }
+
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(dots.nth(2)).not.toHaveClass(/active/);
+  });
+
+  test("home vertical wheel does not cycle preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(0, 200);
+
+    await expect(dots.nth(0)).toHaveClass(/active/);
+  });
+
   test("home swipe registers despite vertical drift", async ({ page }) => {
     // A swipe in landscape mode often drifts vertically; the gesture should
     // still cycle the preset as long as horizontal motion dominates within

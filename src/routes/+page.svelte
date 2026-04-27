@@ -17,6 +17,7 @@
  } from "$lib/timer";
  import { log } from "$lib/logger";
  import { DEFAULT_PRESETS, fetchPresets } from "$lib/presets";
+ import { WheelGestures, type WheelEventState } from "wheel-gestures";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
  import TotalTimeDisplay from "$lib/components/TotalTimeDisplay.svelte";
@@ -303,6 +304,38 @@
   }
  }
 
+ // Trackpad 2-finger horizontal swipe via wheel-gestures.
+ // The library distinguishes a fresh user push from inertia decay using
+ // per-event acceleration ratios, so we just fire on the first event of
+ // a new gesture (or a momentum-cancel — i.e. a fresh push during the
+ // tail of a previous swipe). preventWheelAction: 'x' calls
+ // preventDefault on horizontal-dominant events to suppress the macOS
+ // back/forward navigation gesture.
+ let homeContainer: HTMLDivElement | undefined = $state();
+
+ function handleWheelGesture(state: WheelEventState) {
+  if (!(state.isStart || state.isMomentumCancel)) return;
+  const [dx, dy] = state.axisDelta;
+  if (Math.abs(dx) <= Math.abs(dy)) return;
+  // Raw deltaX semantics (reverseSign disabled below). Mac default
+  // natural scrolling: finger-right → deltaX < 0. Match touch
+  // drag-to-pan: physical finger-right = next preset.
+  if (dx < 0) cyclePreset(1);
+  else cyclePreset(-1);
+ }
+
+ $effect(() => {
+  if (!homeContainer) return;
+  const wg = WheelGestures({ preventWheelAction: "x", reverseSign: false });
+  const offWheel = wg.on("wheel", handleWheelGesture);
+  const unobserve = wg.observe(homeContainer);
+  return () => {
+   unobserve();
+   offWheel();
+   wg.disconnect();
+  };
+ });
+
  // Picker helpers
  function openPicker(which: "work" | "rest" | "repeat") {
   if (which === "work") pickerOriginalValue = duration;
@@ -493,6 +526,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
    class="home"
+   bind:this={homeContainer}
    onpointerdown={handleHomePointerDown}
    onpointermove={handleHomePointerMove}
    onpointerup={handleHomePointerUp}

@@ -129,7 +129,8 @@ The `?` key opens a modal overlay listing all available shortcuts. It works from
 
 The home screen supports cycling through preset timer configurations:
 
-- **Touch**: Swipe left = next preset, swipe right = previous preset (matches iOS carousel convention and the active screen's skip direction; same 50px threshold)
+- **Touch**: Drag-to-pan semantics — swipe right = next preset, swipe left = previous preset (50px threshold, matches the Right/Left arrow keys)
+- **Trackpad (laptop)**: 2-finger horizontal swipe on the home screen, handled by the [`wheel-gestures`](https://github.com/xiel/wheel-gestures) library. The library uses per-event acceleration ratios to distinguish a fresh user push from inertia decay, so a hard swipe fires exactly once and a new push during the inertia tail is detected as `isMomentumCancel` and re-fires. We act on `isStart || isMomentumCancel` for horizontal-dominant gestures only and pass `preventWheelAction: 'x'` to suppress the macOS browser back/forward gesture. Initialised with `reverseSign: false` so `axisDelta` matches the raw `deltaX` sign — with macOS natural scrolling on (default), physical finger-right produces `deltaX < 0` → next preset.
 - **Keyboard**: Left/Right arrow keys when on the idle home screen (no picker open)
 - The list wraps around in both directions
 - A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)

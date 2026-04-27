@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@modyfi/vite-plugin-yaml": "^1.1.1",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "wheel-gestures": "^2.2.48"
   }
 }
