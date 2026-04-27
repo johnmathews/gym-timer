@@ -252,20 +252,17 @@
  let suppressNextHomeClick = false;
 
  // Trackpad 2-finger horizontal swipe on home screen.
- // After firing we hold a hard cooldown (events discarded), then the
- // first post-cooldown event is gated by a freshness check: either a
- // real idle gap (>=80ms with no events — the normal between-gestures
- // pause) or a single-event magnitude consistent with a new push
- // (>=30px). Decaying inertia at the cooldown boundary is below both,
- // so it gets filtered and a hard swipe still fires exactly once.
- let wheelAccumX = 0;
- let wheelLockedUntil = 0;
- let lastWheelTime = 0;
- let wheelNeedsFresh = false;
- const WHEEL_THRESHOLD = 60;
- const WHEEL_COOLDOWN_MS = 300;
- const WHEEL_FRESH_GAP_MS = 80;
- const WHEEL_FRESH_MAG = 30;
+ // We fire only on a wheel event that follows a real idle gap from any
+ // prior wheel event AND has a meaningful magnitude. Mac trackpad
+ // inertia emits a long burst of decaying events at <100ms intervals,
+ // so every inertia event falls inside the gap and is dropped. The
+ // user's next gesture starts after the inertia ends — its first
+ // event has a large gap and high magnitude, and fires once.
+ // Sentinel makes the first wheel event after page load see an effectively
+ // infinite gap (it follows no prior gesture).
+ let lastWheelTime = Number.NEGATIVE_INFINITY;
+ const WHEEL_QUIET_MS = 200;
+ const WHEEL_MIN_MAG = 25;
 
  function handleHomeWheel(e: WheelEvent) {
   // Only act on horizontal-dominant gestures; let vertical scroll pass through.
@@ -274,34 +271,15 @@
 
   const now = performance.now();
   const gap = now - lastWheelTime;
-  const mag = Math.abs(e.deltaX);
   lastWheelTime = now;
 
-  // Hard cooldown after firing — every event in this window is inertia.
-  if (now < wheelLockedUntil) {
-   wheelAccumX = 0;
-   wheelNeedsFresh = true;
-   return;
-  }
-
-  // First event past cooldown must look like a real new gesture.
-  if (wheelNeedsFresh) {
-   if (gap < WHEEL_FRESH_GAP_MS && mag < WHEEL_FRESH_MAG) return;
-   wheelNeedsFresh = false;
-   wheelAccumX = 0;
-  }
-
-  wheelAccumX += e.deltaX;
-  if (Math.abs(wheelAccumX) <= WHEEL_THRESHOLD) return;
+  if (gap < WHEEL_QUIET_MS) return;
+  if (Math.abs(e.deltaX) < WHEEL_MIN_MAG) return;
 
   // Mac default (natural scrolling): finger-right → deltaX < 0.
   // Match touch drag-to-pan: physical finger-right = next preset.
-  if (wheelAccumX < 0) cyclePreset(1);
+  if (e.deltaX < 0) cyclePreset(1);
   else cyclePreset(-1);
-
-  wheelLockedUntil = now + WHEEL_COOLDOWN_MS;
-  wheelAccumX = 0;
-  wheelNeedsFresh = false;
  }
 
  function handleHomePointerDown(e: PointerEvent) {
