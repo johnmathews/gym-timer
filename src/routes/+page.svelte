@@ -252,24 +252,32 @@
  let suppressNextHomeClick = false;
 
  // Trackpad 2-finger horizontal swipe on home screen.
- // Accumulates wheel deltaX during a gesture; fires once per gesture.
+ // Lock is released on either a 100ms idle gap (clean gesture end) OR a
+ // hard 350ms ceiling. The ceiling matters: Mac trackpad inertia keeps
+ // emitting wheel events for ~1s after the physical swipe ends, so an
+ // idle-only release stays pinned until the trail finishes and blocks
+ // subsequent swipes attempted before then.
  let wheelAccumX = 0;
  let wheelLocked = false;
- let wheelEndTimer: ReturnType<typeof setTimeout> | null = null;
+ let wheelLockedAt = 0;
+ let lastWheelTime = 0;
  const WHEEL_THRESHOLD = 60;
- const WHEEL_END_MS = 150;
+ const WHEEL_GAP_MS = 100;
+ const WHEEL_MAX_LOCK_MS = 350;
 
  function handleHomeWheel(e: WheelEvent) {
   // Only act on horizontal-dominant gestures; let vertical scroll pass through.
   if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
   e.preventDefault();
 
-  if (wheelEndTimer) clearTimeout(wheelEndTimer);
-  wheelEndTimer = setTimeout(() => {
+  const now = performance.now();
+  const gapElapsed = now - lastWheelTime > WHEEL_GAP_MS;
+  const lockExpired = wheelLocked && now - wheelLockedAt > WHEEL_MAX_LOCK_MS;
+  if (gapElapsed || lockExpired) {
    wheelAccumX = 0;
    wheelLocked = false;
-   wheelEndTimer = null;
-  }, WHEEL_END_MS);
+  }
+  lastWheelTime = now;
 
   if (wheelLocked) return;
   wheelAccumX += e.deltaX;
@@ -281,6 +289,7 @@
   else cyclePreset(-1);
 
   wheelLocked = true;
+  wheelLockedAt = now;
   wheelAccumX = 0;
  }
 

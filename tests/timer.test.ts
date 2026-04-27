@@ -1296,6 +1296,31 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
   });
 
+  // Regression: with the original setTimeout-based release, every wheel
+  // event reset the 150ms idle timer, so on a real Mac trackpad the lock
+  // stayed on for the full inertia tail (~1s) and blocked every swipe
+  // after the first. Now the lock has a hard 350ms ceiling AND releases
+  // on a 100ms idle gap.
+  test("home wheel cycles repeatedly when separated by an idle gap", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(1)).toHaveClass(/active/);
+
+    await page.clock.fastForward(150);
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(2)).toHaveClass(/active/);
+
+    await page.clock.fastForward(150);
+    await page.mouse.wheel(-80, 0);
+    await expect(dots.nth(0)).toHaveClass(/active/);
+  });
+
   test("home vertical wheel does not cycle preset", async ({ page }) => {
     const dots = page.getByTestId("preset-dots").locator(".dot");
     await expect(dots.nth(0)).toHaveClass(/active/);
