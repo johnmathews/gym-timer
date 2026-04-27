@@ -1264,6 +1264,51 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
   });
 
+  // Trackpad 2-finger swipe on laptops: synthesised via wheel events with
+  // non-zero deltaX. Mac default natural-scrolling: physical finger-right
+  // produces deltaX < 0, which we map to next preset (drag-to-pan parity
+  // with the touch gesture).
+  test("home wheel deltaX < 0 (finger-right) cycles to NEXT preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(-80, 0);
+
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
+  test("home wheel deltaX > 0 (finger-left) cycles to PREVIOUS preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(80, 0);
+
+    await expect(dots.nth(2)).toHaveClass(/active/);
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  });
+
+  test("home vertical wheel does not cycle preset", async ({ page }) => {
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(0)).toHaveClass(/active/);
+
+    const card = page.getByTestId("config-card-work");
+    const box = await card.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.wheel(0, 200);
+    await page.mouse.wheel(5, 200); // small horizontal noise — still vertical-dominant
+
+    await expect(dots.nth(0)).toHaveClass(/active/);
+  });
+
   test("home swipe registers despite vertical drift", async ({ page }) => {
     // A swipe in landscape mode often drifts vertically; the gesture should
     // still cycle the preset as long as horizontal motion dominates within

@@ -251,6 +251,39 @@
  let homePointerCaptured = false;
  let suppressNextHomeClick = false;
 
+ // Trackpad 2-finger horizontal swipe on home screen.
+ // Accumulates wheel deltaX during a gesture; fires once per gesture.
+ let wheelAccumX = 0;
+ let wheelLocked = false;
+ let wheelEndTimer: ReturnType<typeof setTimeout> | null = null;
+ const WHEEL_THRESHOLD = 60;
+ const WHEEL_END_MS = 150;
+
+ function handleHomeWheel(e: WheelEvent) {
+  // Only act on horizontal-dominant gestures; let vertical scroll pass through.
+  if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+  e.preventDefault();
+
+  if (wheelEndTimer) clearTimeout(wheelEndTimer);
+  wheelEndTimer = setTimeout(() => {
+   wheelAccumX = 0;
+   wheelLocked = false;
+   wheelEndTimer = null;
+  }, WHEEL_END_MS);
+
+  if (wheelLocked) return;
+  wheelAccumX += e.deltaX;
+  if (Math.abs(wheelAccumX) <= WHEEL_THRESHOLD) return;
+
+  // Mac default (natural scrolling): finger-right → deltaX < 0.
+  // Match touch drag-to-pan: physical finger-right = next preset.
+  if (wheelAccumX < 0) cyclePreset(1);
+  else cyclePreset(-1);
+
+  wheelLocked = true;
+  wheelAccumX = 0;
+ }
+
  function handleHomePointerDown(e: PointerEvent) {
   // Toolbar buttons (volume, fullscreen) keep tap-only behaviour;
   // ConfigCards intentionally participate so swipes that start on a card cycle presets.
@@ -496,6 +529,7 @@
    onpointerdown={handleHomePointerDown}
    onpointermove={handleHomePointerMove}
    onpointerup={handleHomePointerUp}
+   onwheel={handleHomeWheel}
    onclickcapture={handleHomeClickCapture}
   >
    <div class="cards">
