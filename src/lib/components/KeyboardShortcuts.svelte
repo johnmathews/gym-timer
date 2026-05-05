@@ -13,6 +13,10 @@
           <span>Play / Pause / Resume</span>
         </div>
         <div class="row">
+          <kbd>Enter</kbd>
+          <span>Play / Pause / Resume</span>
+        </div>
+        <div class="row">
           <kbd>&larr;</kbd>
           <span>Previous segment / preset</span>
         </div>

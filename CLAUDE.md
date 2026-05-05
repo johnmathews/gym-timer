@@ -34,7 +34,7 @@
 - Pause/resume: subtle toggle sounds, tap screen to resume (no resume button)
 - Background colors: getReady/rest = yellow `#FFBA08`, work = green `#2ECC71`, paused = black, finished = 4-color flash (red/yellow/green/cyan, ~11.5s)
 - Swipe back to work segment inserts a getReady countdown before it
-- Desktop keyboard shortcuts: Space (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), F (fullscreen), Esc (close overlay/home when finished), ? (shortcuts help modal)
+- Desktop keyboard shortcuts: Space/Enter (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), F (fullscreen), Esc (close overlay/home when finished), ? (shortcuts help modal)
 - Home screen preset cycling: swipe left/right (touch) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
 
 ## Presets

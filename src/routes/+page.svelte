@@ -463,10 +463,12 @@
   // Timer controls only apply when not in picker
   if (activePicker) return;
 
-  if (e.key === " " && $status === "idle" && canStart) {
+  const isPlayPauseKey = e.key === " " || e.key === "Enter";
+
+  if (isPlayPauseKey && $status === "idle" && canStart) {
    e.preventDefault();
    handleStart();
-  } else if (e.key === " " && (isRunning || isPaused)) {
+  } else if (isPlayPauseKey && (isRunning || isPaused)) {
    e.preventDefault();
    resumeAudioContext();
    if (isRunning) {

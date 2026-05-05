@@ -1094,6 +1094,31 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
   });
 
+  test("Enter starts timer from idle screen", async ({ page }) => {
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("Enter pauses a running timer", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.locator(".app")).toHaveClass(/getReady/);
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+  });
+
+  test("Enter resumes a paused timer", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
   test("Escape closes picker and returns to home screen", async ({ page }) => {
     await page.getByTestId("config-card-work").click();
     await expect(page.getByTestId("ruler-picker")).toBeVisible();
@@ -1117,7 +1142,7 @@ test.describe("Keyboard shortcuts", () => {
   test("? opens keyboard shortcuts modal", async ({ page }) => {
     await page.keyboard.press("Shift+/");
     await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
-    await expect(page.getByText("Pause / Resume")).toBeVisible();
+    await expect(page.getByText("Pause / Resume").first()).toBeVisible();
   });
 
   test("? toggles shortcuts modal closed", async ({ page }) => {

@@ -96,7 +96,7 @@ On hover-capable devices, the following keyboard shortcuts are available:
 
 | Key       | Action                                              |
 |-----------|-----------------------------------------------------|
-| `Space`   | Play / Pause / Resume                               |
+| `Space` / `Enter` | Play / Pause / Resume                       |
 | `←`       | Previous segment (active) / Previous preset (idle)  |
 | `→`       | Next segment (active) / Next preset (idle)          |
 | `↑`       | Add a rep (live edit)                               |
