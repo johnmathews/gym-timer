@@ -9,11 +9,7 @@
       <h2>Keyboard Shortcuts</h2>
       <div class="shortcuts">
         <div class="row">
-          <kbd>Space</kbd>
-          <span>Play / Pause / Resume</span>
-        </div>
-        <div class="row">
-          <kbd>Enter</kbd>
+          <span class="keys"><kbd>Space</kbd><kbd>Enter</kbd></span>
           <span>Play / Pause / Resume</span>
         </div>
         <div class="row">
@@ -50,7 +46,7 @@
         </div>
         <div class="row">
           <kbd>Esc</kbd>
-          <span>Close overlay / Home when finished</span>
+          <span>Close overlay / Home from any workout</span>
         </div>
         <div class="row">
           <kbd>?</kbd>
@@ -101,6 +97,14 @@
     align-items: center;
     gap: 16px;
     padding: 10px 0;
+  }
+
+  .keys {
+    display: inline-flex;
+    gap: 6px;
+    flex-shrink: 0;
+    color: inherit;
+    font-size: inherit;
   }
 
   kbd {

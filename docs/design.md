@@ -105,14 +105,16 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `H`       | Go home (paused/finished)                           |
 | `M`       | Toggle mute / unmute                                |
 | `F`       | Toggle fullscreen (works on any screen)             |
-| `Esc`     | Close overlay / Go home when finished               |
+| `Esc`     | Close overlay / Go home from any workout state      |
 | `?`       | Toggle keyboard shortcuts help modal                |
 
 **Escape behavior by context:**
 - Shortcuts modal open → closes modal
 - Picker open → cancels picker (reverts value)
-- Timer finished → returns to home screen
-- Timer running/paused → does nothing (except browser's native fullscreen exit)
+- Timer running, paused, or finished → returns to home screen (calls `handleReset`)
+- Idle home screen with no overlay → does nothing (except browser's native fullscreen exit)
+
+`Space` and `Enter` are fully interchangeable. Both keys are routed through the same handler in every state — start from idle, pause when running, resume when paused, ignored when a picker is open, ignored when finished. There is no scenario where one works and the other doesn't.
 
 The `?` key opens a modal overlay listing all available shortcuts. It works from any screen (home, active timer, picker). The modal is implemented as a `KeyboardShortcuts` component (`src/lib/components/KeyboardShortcuts.svelte`).
 

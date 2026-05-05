@@ -1053,23 +1053,21 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
   });
 
-  test("Escape does nothing while timer is running", async ({ page }) => {
+  test("Escape returns to home while timer is running", async ({ page }) => {
     await page.getByTestId("play-button").click();
     await expect(page.getByTestId("active-screen")).toBeVisible();
 
     await page.keyboard.press("Escape");
-    // Should still be on the active screen, not reset
-    await expect(page.getByTestId("active-screen")).toBeVisible();
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
   });
 
-  test("Escape does nothing while timer is paused", async ({ page }) => {
+  test("Escape returns to home while timer is paused", async ({ page }) => {
     await page.getByTestId("play-button").click();
     await page.keyboard.press("Space");
     await expect(page.locator(".app")).toHaveClass(/paused/);
 
     await page.keyboard.press("Escape");
-    // Should still be paused, not reset
-    await expect(page.locator(".app")).toHaveClass(/paused/);
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
   });
 
   test("Escape returns to home screen when finished", async ({ page }) => {
@@ -1117,6 +1115,53 @@ test.describe("Keyboard shortcuts", () => {
 
     await page.keyboard.press("Enter");
     await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("Space pause then Enter resume (cross-key parity)", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.locator(".app")).toHaveClass(/getReady/);
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("Enter pause then Space resume (cross-key parity)", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.locator(".app")).toHaveClass(/getReady/);
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).not.toHaveClass(/paused/);
+  });
+
+  test("Enter is ignored when picker is open (parity with Space)", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+
+    await page.keyboard.press("Enter");
+    // Picker should still be open, timer must not have started
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+    await expect(page.getByTestId("phase-label")).not.toBeVisible();
+  });
+
+  test("Enter does nothing when finished (parity with Space)", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-1").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await page.clock.fastForward(16000);
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+
+    await page.keyboard.press("Enter");
+    // Should still be on the finished screen
+    await expect(page.locator(".app")).toHaveClass(/finished/);
   });
 
   test("Escape closes picker and returns to home screen", async ({ page }) => {

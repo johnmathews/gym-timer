@@ -426,7 +426,7 @@
    return;
   }
 
-  // Escape: close shortcuts modal, then picker/presets, then reset if finished
+  // Escape: close shortcuts modal, then picker, then go home from any workout state
   if (e.key === "Escape" && !document.fullscreenElement) {
    if (showShortcuts) {
     e.preventDefault();
@@ -438,7 +438,7 @@
     cancelPicker();
     return;
    }
-   if (isFinished) {
+   if (isActive || isFinished) {
     e.preventDefault();
     handleReset();
     return;
