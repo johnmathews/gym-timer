@@ -1844,3 +1844,60 @@ test.describe("Reorder presets", () => {
     await expect(page.getByTestId("preset-reorder")).toHaveCount(0);
   });
 });
+
+test.describe("Preset shortcut", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+  });
+
+  test("P opens the preset sheet on the idle home screen, in either case", async ({ page }) => {
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+
+    await page.keyboard.press("P");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+  });
+
+  test("P does nothing while a picker is open or the timer runs", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+  });
+
+  test("typing p in the name field enters the letter and leaves the sheet open", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    const input = page.getByTestId("preset-name-input");
+    await input.fill("");
+    await input.pressSequentially("pp");
+    await expect(input).toHaveValue("pp");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+  });
+
+  test("ArrowRight does not cycle presets while the sheet is open", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("preset-dots").locator(".dot").nth(0)).toHaveClass(/active/);
+  });
+
+  test("the shortcuts help lists P", async ({ page }) => {
+    await page.keyboard.press("?");
+    await expect(page.getByText("Presets (home screen)")).toBeVisible();
+  });
+});

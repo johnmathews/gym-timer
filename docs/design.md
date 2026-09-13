@@ -103,13 +103,17 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `↓`       | Remove a rep (live edit)                            |
 | `R`       | Restart workout (active/paused/finished)            |
 | `H`       | Go home (paused/finished)                           |
+| `P`       | Open the preset sheet (idle home screen only)       |
 | `M`       | Toggle mute / unmute                                |
 | `F`       | Toggle fullscreen (works on any screen)             |
 | `Esc`     | Close overlay / Go home from any workout state      |
 | `?`       | Toggle keyboard shortcuts help modal                |
 
+`P` does nothing while the timer runs, while a picker is open, or while another overlay is open, and typing "p" in the preset name field enters the letter as normal.
+
 **Escape behavior by context:**
 - Shortcuts modal open → closes modal
+- Preset sheet or reorder list open → closes it
 - Picker open → cancels picker (reverts value)
 - Timer running, paused, or finished → returns to home screen (calls `handleReset`)
 - Idle home screen with no overlay → does nothing (except browser's native fullscreen exit)

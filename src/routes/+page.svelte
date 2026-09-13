@@ -541,6 +541,23 @@
    return;
   }
 
+  // P opens the preset sheet from the idle home screen when nothing else is open
+  if (
+   (e.key === "p" || e.key === "P") &&
+   !e.metaKey &&
+   !e.ctrlKey &&
+   !e.altKey &&
+   $status === "idle" &&
+   !activePicker &&
+   !presetSheetOpen &&
+   !reorderOpen &&
+   !showShortcuts
+  ) {
+   e.preventDefault();
+   presetSheetOpen = true;
+   return;
+  }
+
   // Timer controls only apply when no picker, preset sheet or reorder list is open
   if (activePicker || presetSheetOpen || reorderOpen) return;
 
