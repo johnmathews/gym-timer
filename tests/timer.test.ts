@@ -1584,3 +1584,190 @@ test.describe("Preset storage", () => {
     expect(errors).toHaveLength(0);
   });
 });
+
+test.describe("Preset bar and sheet", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  async function changeWorkTo30(page: Page): Promise<void> {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-30").click({ force: true });
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  }
+
+  test("empty state: the bar saves the current settings as a preset", async ({ page }) => {
+    await page.goto("/");
+    const bar = page.getByTestId("preset-bar");
+    await expect(bar).toContainText("Save as preset");
+    await bar.click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("1:00 / 0:00 × 10");
+    await page.getByTestId("preset-name-save").click();
+
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(bar).toContainText("1:00 / 0:00 × 10");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(1);
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("1:00 / 0:00 × 10");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(1);
+  });
+
+  test("a typed name is saved, and Enter submits", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-input").fill("5 Hangs");
+    await page.getByTestId("preset-name-input").press("Enter");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("5 Hangs");
+  });
+
+  test("changing a card marks the preset edited; Update saves it", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const bar = page.getByTestId("preset-bar");
+    await expect(bar).toContainText("Test EMOM");
+    await expect(bar).not.toContainText("edited");
+
+    // Update is only offered once the preset has been edited
+    await bar.click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet-update")).toHaveCount(0);
+    await page.getByTestId("preset-sheet-cancel").click();
+
+    await changeWorkTo30(page);
+    await expect(bar).toContainText("edited");
+
+    await bar.click();
+    await page.getByTestId("preset-sheet-update").click();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(bar).not.toContainText("edited");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
+  });
+
+  test("Save as new adds a preset and selects it", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await changeWorkTo30(page);
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-save-new").click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("0:30 / 0:00 × 10");
+    await page.getByTestId("preset-name-input").fill("Half EMOM");
+    await page.getByTestId("preset-name-save").click();
+
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots).toHaveCount(4);
+    await expect(dots.nth(3)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Half EMOM");
+    await expect(page.getByTestId("preset-bar")).not.toContainText("edited");
+
+    // The preset that was edited is untouched
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+  });
+
+  test("Rename persists", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("Test EMOM");
+    await page.getByTestId("preset-name-input").fill("Morning EMOM");
+    await page.getByTestId("preset-name-save").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Morning EMOM");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Morning EMOM");
+  });
+
+  test("Delete needs a confirming tap and keeps the card values", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await expect(dots).toHaveCount(3);
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(dots).toHaveCount(2);
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+  });
+
+  test("Cancel changes nothing", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const before = await page.evaluate(() => localStorage.getItem("timer-presets"));
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-cancel").click();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    expect(await page.evaluate(() => localStorage.getItem("timer-presets"))).toBe(before);
+  });
+
+  test("a blank name disables Save", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-input").fill("   ");
+    await expect(page.getByTestId("preset-name-save")).toBeDisabled();
+  });
+
+  test("a failed save shows the error and saves nothing", async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "timer-presets") throw new DOMException("full", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-save").click();
+    await expect(page.getByTestId("preset-sheet-error")).toContainText("Couldn't save");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+
+    await page.getByTestId("preset-sheet-cancel").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+  });
+
+  test("a swipe that starts on the bar cycles presets without opening the sheet", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const box = await page.getByTestId("preset-bar").boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx - 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(page.getByTestId("preset-dots").locator(".dot").nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+  });
+
+  test("Escape closes the sheet, including from the name field", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    await page.getByTestId("preset-name-input").press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+  });
+});

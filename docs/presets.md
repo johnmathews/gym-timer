@@ -34,6 +34,13 @@ In `src/routes/+page.svelte`:
 - Left/Right arrow keys cycle presets when `$status === "idle"` and no picker is open.
 - Manual card changes are discarded when cycling to another preset.
 
+## Creating and Editing
+
+- Presets are created, updated, renamed and deleted from the name bar above the cards and the sheet it opens (layout and behaviour in [design.md](design.md#preset-bar-and-sheet)).
+- Every change goes through the store's pure operations and then `savePresets()`. The page adopts the new list only when the save returns `{ ok: true }`; on failure the sheet shows the error and the previous list stays.
+- After the first successful save in a session, the page calls `requestPersistence()`.
+- A new preset is appended to the end of the list and becomes active. Deleting the active preset keeps the card values and clears the selection; cycling then starts from the first preset (next) or the last (previous).
+
 ## Dot Indicator
 
 - Rendered inside the `.cards` div, below the Repeat card, one dot per stored preset
@@ -56,4 +63,4 @@ The `getItem` guard matters: `addInitScript` runs again on every navigation, inc
 ## Test Coverage
 
 - **Unit** (`src/lib/presetStore.test.ts`): loading and validation, saving and save failures, every pure operation, id generation, the persistence request, and the default-storage paths.
-- **E2e** (`tests/timer.test.ts`): empty-storage defaults, seeded presets loading and surviving a reload, corrupt storage loading as empty, arrow/swipe/wheel cycling and wraparound, and the dot indicator.
+- **E2e** (`tests/timer.test.ts`): empty-storage defaults, seeded presets loading and surviving a reload, corrupt storage loading as empty, arrow/swipe/wheel cycling and wraparound, the dot indicator, and the name bar and sheet (create, the edited marker and Update, save as new, rename, delete with confirmation, cancel, the blank-name guard, a failed save, a swipe that starts on the bar, and Escape).

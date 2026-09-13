@@ -142,6 +142,21 @@ The home screen supports cycling through preset timer configurations:
 
 Swipe handling on the home screen excludes only the toolbar (volume, fullscreen) from swipe capture. Config cards participate in the gesture so swipes that begin on a card still cycle presets — the synthesized click that follows a swipe is consumed by a capture-phase click handler on `.home`, so the picker only opens on a real tap.
 
+## Preset Bar and Sheet
+
+- A **name bar** (`#preset-bar`, `PresetBar.svelte`) sits at the top of the config cards. It shows the active preset's name, followed by "· edited" when the Work, Rest or Repeat card no longer matches the stored preset. With no active preset (none saved yet, or the active one was just deleted) it reads "Save as preset…".
+- Tapping the bar opens the **preset sheet** (`#preset-sheet`, `PresetSheet.svelte`), a panel over a dimmed backdrop:
+  - **Update "name"** (only when edited) overwrites the active preset with the current values
+  - **Save as new preset…** opens the name field prefilled with a summary such as `0:30 / 0:15 × 5`; the new preset is appended and becomes active
+  - **Rename…** opens the name field prefilled with the current name
+  - **Delete "name"** turns into a confirm button; deleting keeps the card values and clears the selection
+  - **Cancel**, a tap on the backdrop, or Escape closes the sheet
+- With no active preset, tapping the bar goes straight to the name field.
+- The name field trims its input, allows 1–40 characters, disables Save when blank, and saves on Enter.
+- If saving fails (storage full or disabled), the sheet stays open with the error and nothing changes.
+- A swipe that starts on the bar cycles presets like one that starts on a card; the click that follows the swipe is suppressed, so the sheet does not open.
+- While the sheet is open, arrow keys, Space and Enter do not act on the timer or cycle presets.
+
 ## Config Cards
 
 Idle screen shows three config cards (Work, Rest, Repeats) that open full-screen ruler pickers when tapped. Each card displays:

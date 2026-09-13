@@ -16,7 +16,19 @@
   toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
- import { loadPresets, type Preset } from "$lib/presetStore";
+ import {
+  loadPresets,
+  savePresets,
+  addPreset,
+  updatePreset,
+  renamePreset,
+  removePreset,
+  matchesValues,
+  summaryName,
+  requestPersistence,
+  type Preset,
+  type SaveResult,
+ } from "$lib/presetStore";
  import { WheelGestures, type WheelEventState } from "wheel-gestures";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
@@ -26,6 +38,8 @@
  import VolumeControl from "$lib/components/VolumeControl.svelte";
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
  import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
+ import PresetBar from "$lib/components/PresetBar.svelte";
+ import PresetSheet from "$lib/components/PresetSheet.svelte";
 
  interface WebkitDocument extends Document {
   webkitFullscreenElement?: Element | null;
@@ -49,6 +63,8 @@
 
  let presets: Preset[] = $state([]);
  let activePresetId: string | null = $state(null);
+ let presetSheetOpen = $state(false);
+ let persistenceRequested = false;
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
@@ -248,6 +264,43 @@
   applyPreset(presets[next]);
  }
 
+ const activePreset = $derived(presets.find((p) => p.id === activePresetId) ?? null);
+ const presetEdited = $derived(activePreset !== null && !matchesValues(activePreset, { work: duration, rest, reps }));
+
+ // Preset editing: each change is saved first and adopted only if the save succeeds
+ function commitPresets(next: Preset[], nextActiveId: string | null): SaveResult {
+  const result = savePresets(next);
+  if (!result.ok) return result;
+  presets = next;
+  activePresetId = nextActiveId;
+  log("presets:save", { count: next.length });
+  if (!persistenceRequested) {
+   persistenceRequested = true;
+   void requestPersistence();
+  }
+  return result;
+ }
+
+ function handlePresetCreate(name: string): SaveResult {
+  const next = addPreset(presets, name, { work: duration, rest, reps });
+  return commitPresets(next, next[next.length - 1].id);
+ }
+
+ function handlePresetUpdate(): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(updatePreset(presets, activePresetId, { work: duration, rest, reps }), activePresetId);
+ }
+
+ function handlePresetRename(name: string): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(renamePreset(presets, activePresetId, name), activePresetId);
+ }
+
+ function handlePresetDelete(): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(removePreset(presets, activePresetId), null);
+ }
+
  // Home screen swipe handling
  let homeSwipeStartX = 0;
  let homeSwipeStartY = 0;
@@ -429,11 +482,16 @@
    return;
   }
 
-  // Escape: close shortcuts modal, then picker, then go home from any workout state
+  // Escape: close shortcuts modal, then preset sheet, then picker, then go home from any workout state
   if (e.key === "Escape" && !document.fullscreenElement) {
    if (showShortcuts) {
     e.preventDefault();
     showShortcuts = false;
+    return;
+   }
+   if (presetSheetOpen) {
+    e.preventDefault();
+    presetSheetOpen = false;
     return;
    }
    if (activePicker) {
@@ -463,8 +521,8 @@
    return;
   }
 
-  // Timer controls only apply when not in picker
-  if (activePicker) return;
+  // Timer controls only apply when no picker or preset sheet is open
+  if (activePicker || presetSheetOpen) return;
 
   const isPlayPauseKey = e.key === " " || e.key === "Enter";
 
@@ -538,6 +596,7 @@
    onclickcapture={handleHomeClickCapture}
   >
    <div class="cards">
+    <PresetBar name={activePreset?.name ?? null} edited={presetEdited} onclick={() => (presetSheetOpen = true)} />
     <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
@@ -673,6 +732,18 @@
     {/if}
    </div>
   </div>
+ {/if}
+ {#if presetSheetOpen}
+  <PresetSheet
+   activeName={activePreset?.name ?? null}
+   edited={presetEdited}
+   defaultName={summaryName({ work: duration, rest, reps })}
+   onupdate={handlePresetUpdate}
+   oncreate={handlePresetCreate}
+   onrename={handlePresetRename}
+   ondelete={handlePresetDelete}
+   onclose={() => (presetSheetOpen = false)}
+  />
  {/if}
  <KeyboardShortcuts open={showShortcuts} onclose={() => (showShortcuts = false)} />
 </main>
