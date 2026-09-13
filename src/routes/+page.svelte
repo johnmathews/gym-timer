@@ -636,14 +636,18 @@
    onclickcapture={handleHomeClickCapture}
   >
    <div class="cards">
-    <PresetBar name={activePreset?.name ?? null} edited={presetEdited} onclick={() => (presetSheetOpen = true)} />
     <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
-    <div class="preset-dots" data-testid="preset-dots">
-     {#each presets as preset (preset.id)}
-      <span class="dot" class:active={preset.id === activePresetId}></span>
-     {/each}
+    <div class="preset-row">
+     {#if presets.length > 0}
+      <div class="preset-dots" data-testid="preset-dots">
+       {#each presets as preset (preset.id)}
+        <span class="dot" class:active={preset.id === activePresetId}></span>
+       {/each}
+      </div>
+     {/if}
+     <PresetBar name={activePreset?.name ?? null} edited={presetEdited} onclick={() => (presetSheetOpen = true)} />
     </div>
    </div>
 
@@ -847,11 +851,19 @@
   width: 100%;
  }
 
+ /* Preset dots with the active preset's name (or "Save as preset…") to their right */
+ .preset-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+ }
+
  .preset-dots {
   display: flex;
-  justify-content: center;
+  flex-shrink: 0;
   gap: 8px;
-  padding-top: 4px;
  }
 
  .dot {

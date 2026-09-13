@@ -6,7 +6,7 @@ The app uses a single-page layout centered on screen with responsive width const
 
 - **Mobile** (<768px): max-width 500px, single-column vertical layout
 - **Desktop** (768px–1023px): max-width 640px, single-column vertical layout
-- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** (`minmax(0, 9fr) minmax(0, 11fr)`, roughly 45/55) — preset bar, config cards and dots on the left, total time + play button on the right, all elements scale with viewport
+- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** (`minmax(0, 9fr) minmax(0, 11fr)`, roughly 45/55) — config cards with the preset dots and name below them on the left, total time + play button on the right, all elements scale with viewport
 - **Phone landscape** (<500px height): full-width 2-column grid (`minmax(0, 1fr)`) with compressed card sizes
 
 On narrow screens, the layout is a vertical flex column with three sections:
@@ -15,7 +15,7 @@ On narrow screens, the layout is a vertical flex column with three sections:
 3. **Toolbar** — bottom, with action buttons
 
 On wide desktop screens (≥1024px), the idle/home screen switches to a 2-column CSS grid:
-- **Left column**: The preset name bar, the three config cards (Work, Rest, Repeat) stacked vertically, and the preset dots
+- **Left column**: The three config cards (Work, Rest, Repeat) stacked vertically, with the preset dots and name bar in a row below them
 - **Right column**: Total time display and play button, vertically centered
 - **Toolbar row**: Spans both columns at the top (fullscreen, volume)
 
@@ -139,7 +139,7 @@ The home screen supports cycling through preset timer configurations:
 - **Trackpad (laptop)**: 2-finger horizontal swipe on the home screen, handled by the [`wheel-gestures`](https://github.com/xiel/wheel-gestures) library. The library uses per-event acceleration ratios to distinguish a fresh user push from inertia decay, so a hard swipe fires exactly once and a new push during the inertia tail is detected as `isMomentumCancel` and re-fires. We act on `isStart || isMomentumCancel` for horizontal-dominant gestures only and pass `preventWheelAction: 'x'` to suppress the macOS browser back/forward gesture. Initialised with `reverseSign: false` so `axisDelta` matches the raw `deltaX` sign — with macOS natural scrolling on (default), physical finger-right produces `deltaX < 0` → next preset.
 - **Keyboard**: Left/Right arrow keys when on the idle home screen (no picker open)
 - The list wraps around in both directions
-- A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)
+- A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others), with the active preset's name to its right
 - Manual config changes (via pickers) are discarded when cycling to a new preset
 - Presets are stored on the device in `localStorage` (see [presets.md](presets.md)); the app ships with none, and with none there are no dots and cycling does nothing
 - On load the first preset is applied; with no presets the cards show the defaults (1:00 work, 0:00 rest, x10)
@@ -148,7 +148,7 @@ Swipe handling on the home screen excludes only the toolbar (volume, fullscreen)
 
 ## Preset Bar and Sheet
 
-- A **name bar** (`#preset-bar`, `PresetBar.svelte`) sits at the top of the config cards. It shows the active preset's name, followed by "· edited" when the Work, Rest or Repeat card no longer matches the stored preset. With no active preset (none saved yet, or the active one was just deleted) it reads "Save as preset…".
+- A **name bar** (`#preset-bar`, `PresetBar.svelte`) sits below the config cards, to the right of the preset dots, in small text so it stays out of the way. It shows the active preset's name, followed by "· edited" when the Work, Rest or Repeat card no longer matches the stored preset. With no active preset (none saved yet, or the active one was just deleted) it reads "Save as preset…".
 - Tapping the bar opens the **preset sheet** (`#preset-sheet`, `PresetSheet.svelte`), a panel over a dimmed backdrop:
   - **Update "name"** (only when edited) overwrites the active preset with the current values
   - **Save as new preset…** opens the name field prefilled with a summary such as `0:30 / 0:15 × 5`; the new preset is appended and becomes active
