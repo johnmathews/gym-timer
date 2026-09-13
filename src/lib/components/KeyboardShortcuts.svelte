@@ -45,6 +45,10 @@
           <span>Home (when paused / finished)</span>
         </div>
         <div class="row">
+          <kbd>P</kbd>
+          <span>Presets (home screen)</span>
+        </div>
+        <div class="row">
           <kbd>Esc</kbd>
           <span>Close overlay / Home from any workout</span>
         </div>

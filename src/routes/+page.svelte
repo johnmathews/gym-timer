@@ -1,5 +1,5 @@
 <script lang="ts">
- import { onMount, onDestroy } from "svelte";
+ import { onMount, onDestroy, tick } from "svelte";
  import {
   createTimer,
   playFinishSound,
@@ -16,7 +16,20 @@
   toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
- import { DEFAULT_PRESETS, fetchPresets } from "$lib/presets";
+ import {
+  loadPresets,
+  savePresets,
+  addPreset,
+  updatePreset,
+  renamePreset,
+  removePreset,
+  movePreset,
+  matchesValues,
+  summaryName,
+  requestPersistence,
+  type Preset,
+  type SaveResult,
+ } from "$lib/presetStore";
  import { WheelGestures, type WheelEventState } from "wheel-gestures";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
@@ -26,6 +39,9 @@
  import VolumeControl from "$lib/components/VolumeControl.svelte";
  import FullscreenButton from "$lib/components/FullscreenButton.svelte";
  import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
+ import PresetBar from "$lib/components/PresetBar.svelte";
+ import PresetSheet from "$lib/components/PresetSheet.svelte";
+ import PresetList from "$lib/components/PresetList.svelte";
 
  interface WebkitDocument extends Document {
   webkitFullscreenElement?: Element | null;
@@ -47,8 +63,12 @@
  let prevRep: number = 1;
  let prevRemaining: number = 0;
 
- let presets = $state(DEFAULT_PRESETS);
- let presetIndex = $state(0);
+ let presets: Preset[] = $state([]);
+ let activePresetId: string | null = $state(null);
+ let presetSheetOpen = $state(false);
+ let reorderOpen = $state(false);
+ let reorderError: string | null = $state(null);
+ let persistenceRequested = false;
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
@@ -94,15 +114,9 @@
   log("mount", { duration, rest, reps });
   timer.configure(duration, rest, reps);
 
-  // Load runtime presets from server (mounted config file)
-  fetchPresets().then((fetched) => {
-   if (fetched) {
-    presets = fetched;
-    presetIndex = 0;
-    applyPreset(0);
-    log("presets:runtime", { count: fetched.length });
-   }
-  });
+  presets = loadPresets();
+  log("presets:load", { count: presets.length });
+  if (presets.length > 0) applyPreset(presets[0]);
 
   function handleVisibility() {
    if (document.visibilityState === "visible") {
@@ -230,19 +244,83 @@
   timer.reset();
  }
 
- // Preset cycling
- function applyPreset(index: number) {
-  const preset = presets[index];
+ // Preset cycling. The active preset is tracked by id, not position, so
+ // reordering or removing other presets never changes which one is active.
+ function applyPreset(preset: Preset) {
+  activePresetId = preset.id;
   duration = preset.work;
   rest = preset.rest;
   reps = preset.reps;
   timer.configure(duration, rest, reps);
-  log("preset:apply", { index, ...preset });
+  log("preset:apply", { ...preset });
  }
 
  function cyclePreset(direction: 1 | -1) {
-  presetIndex = (((presetIndex + direction) % presets.length) + presets.length) % presets.length;
-  applyPreset(presetIndex);
+  if (presets.length === 0) return;
+  const current = presets.findIndex((p) => p.id === activePresetId);
+  // With no active preset, next starts at the first and previous at the last
+  const next =
+   current === -1
+    ? direction === 1
+     ? 0
+     : presets.length - 1
+    : (current + direction + presets.length) % presets.length;
+  applyPreset(presets[next]);
+ }
+
+ const activePreset = $derived(presets.find((p) => p.id === activePresetId) ?? null);
+ const presetEdited = $derived(activePreset !== null && !matchesValues(activePreset, { work: duration, rest, reps }));
+
+ // Preset editing: each change is saved first and adopted only if the save succeeds
+ function commitPresets(next: Preset[], nextActiveId: string | null): SaveResult {
+  const result = savePresets(next);
+  if (!result.ok) return result;
+  presets = next;
+  activePresetId = nextActiveId;
+  log("presets:save", { count: next.length });
+  if (!persistenceRequested) {
+   persistenceRequested = true;
+   void requestPersistence();
+  }
+  return result;
+ }
+
+ function handlePresetCreate(name: string): SaveResult {
+  const next = addPreset(presets, name, { work: duration, rest, reps });
+  return commitPresets(next, next[next.length - 1].id);
+ }
+
+ function handlePresetUpdate(): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(updatePreset(presets, activePresetId, { work: duration, rest, reps }), activePresetId);
+ }
+
+ function handlePresetRename(name: string): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(renamePreset(presets, activePresetId, name), activePresetId);
+ }
+
+ function handlePresetDelete(): SaveResult {
+  if (activePresetId === null) return { ok: false, error: "No preset is selected." };
+  return commitPresets(removePreset(presets, activePresetId), null);
+ }
+
+ // Closing either overlay hands focus back to the name bar
+ function closePresetOverlays() {
+  presetSheetOpen = false;
+  reorderOpen = false;
+  void tick().then(() => document.getElementById("preset-bar")?.focus());
+ }
+
+ function openReorder() {
+  presetSheetOpen = false;
+  reorderError = null;
+  reorderOpen = true;
+ }
+
+ function handlePresetMove(id: string, direction: -1 | 1) {
+  const result = commitPresets(movePreset(presets, id, direction), activePresetId);
+  reorderError = result.ok ? null : result.error;
  }
 
  // Home screen swipe handling
@@ -375,7 +453,7 @@
   return `x${val}`;
  }
 
- // Non-uniform time scale: 5s steps up to 1min, 15s to 3min, 30s to max
+ // Non-uniform time scale: 5s steps below 1 min, 10s steps below 5 min, 30s steps above
  function generateTimeValues(min: number, max: number): number[] {
   const result: number[] = [];
   let v = min;
@@ -426,11 +504,16 @@
    return;
   }
 
-  // Escape: close shortcuts modal, then picker, then go home from any workout state
+  // Escape: close shortcuts modal, then preset sheet or reorder list, then picker, then go home from any workout state
   if (e.key === "Escape" && !document.fullscreenElement) {
    if (showShortcuts) {
     e.preventDefault();
     showShortcuts = false;
+    return;
+   }
+   if (presetSheetOpen || reorderOpen) {
+    e.preventDefault();
+    closePresetOverlays();
     return;
    }
    if (activePicker) {
@@ -460,8 +543,25 @@
    return;
   }
 
-  // Timer controls only apply when not in picker
-  if (activePicker) return;
+  // P opens the preset sheet from the idle home screen when nothing else is open
+  if (
+   (e.key === "p" || e.key === "P") &&
+   !e.metaKey &&
+   !e.ctrlKey &&
+   !e.altKey &&
+   $status === "idle" &&
+   !activePicker &&
+   !presetSheetOpen &&
+   !reorderOpen &&
+   !showShortcuts
+  ) {
+   e.preventDefault();
+   presetSheetOpen = true;
+   return;
+  }
+
+  // Timer controls only apply when no picker, preset sheet or reorder list is open
+  if (activePicker || presetSheetOpen || reorderOpen) return;
 
   const isPlayPauseKey = e.key === " " || e.key === "Enter";
 
@@ -528,6 +628,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
    class="home"
+   inert={presetSheetOpen || reorderOpen || undefined}
    bind:this={homeContainer}
    onpointerdown={handleHomePointerDown}
    onpointermove={handleHomePointerMove}
@@ -535,12 +636,13 @@
    onclickcapture={handleHomeClickCapture}
   >
    <div class="cards">
+    <PresetBar name={activePreset?.name ?? null} edited={presetEdited} onclick={() => (presetSheetOpen = true)} />
     <ConfigCard label="Work" value={displayTime(duration)} color="#2ECC71" onclick={() => openPicker("work")} />
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
     <div class="preset-dots" data-testid="preset-dots">
-     {#each presets as _, i (i)}
-      <span class="dot" class:active={i === presetIndex}></span>
+     {#each presets as preset (preset.id)}
+      <span class="dot" class:active={preset.id === activePresetId}></span>
      {/each}
     </div>
    </div>
@@ -670,6 +772,23 @@
     {/if}
    </div>
   </div>
+ {/if}
+ {#if presetSheetOpen}
+  <PresetSheet
+   activeName={activePreset?.name ?? null}
+   edited={presetEdited}
+   defaultName={summaryName({ work: duration, rest, reps })}
+   onupdate={handlePresetUpdate}
+   oncreate={handlePresetCreate}
+   onrename={handlePresetRename}
+   ondelete={handlePresetDelete}
+   canReorder={presets.length >= 2}
+   onreorder={openReorder}
+   onclose={closePresetOverlays}
+  />
+ {/if}
+ {#if reorderOpen}
+  <PresetList {presets} error={reorderError} onmove={handlePresetMove} onclose={closePresetOverlays} />
  {/if}
  <KeyboardShortcuts open={showShortcuts} onclose={() => (showShortcuts = false)} />
 </main>

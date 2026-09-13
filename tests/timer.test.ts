@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("Timer", () => {
   test.beforeEach(async ({ page }) => {
@@ -1246,6 +1246,108 @@ test.describe("Keyboard shortcuts", () => {
     await expect(page.locator(".app")).toHaveClass(/finished/);
   });
 
+  test("H returns to home screen when finished", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await page.getByTestId("ruler-tick-5").click({ force: true });
+    await page.getByTestId("config-card-repeat").click();
+    await page.getByTestId("ruler-tick-1").click({ force: true });
+
+    await page.getByTestId("play-button").click();
+    await page.clock.fastForward(16000);
+    await expect(page.locator(".app")).toHaveClass(/finished/);
+
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("H returns to home screen when paused", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await page.keyboard.press("Space");
+    await expect(page.locator(".app")).toHaveClass(/paused/);
+
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("H does nothing on idle screen or while running", async ({ page }) => {
+    // H on idle — should stay on home screen
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+
+    // H while running — should stay on active screen
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+    await page.keyboard.press("h");
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+  });
+
+  test("Escape does nothing on idle screen with no overlay", async ({ page }) => {
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+
+  test("R restarts active workout", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await page.clock.fastForward(11000);
+    await expect(page.getByTestId("phase-label")).toHaveText("Work");
+
+    await page.keyboard.press("r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R restarts paused workout", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+
+    await page.keyboard.press("Space"); // pause
+    await page.keyboard.press("r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R is case-insensitive", async ({ page }) => {
+    await page.getByTestId("play-button").click();
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await page.clock.fastForward(11000);
+
+    await page.keyboard.press("Shift+r");
+    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
+    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  });
+
+  test("R does nothing on idle home screen", async ({ page }) => {
+    await page.keyboard.press("r");
+    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  });
+});
+
+// Presets live on the device in localStorage ("timer-presets"). Tests seed
+// them before the page loads; the getItem guard stops page.reload() from
+// re-seeding over whatever a test saved.
+type SeedPreset = { id: string; name: string; work: number; rest: number; reps: number };
+
+const THREE_PRESETS: SeedPreset[] = [
+  { id: "p1", name: "Test EMOM", work: 60, rest: 0, reps: 10 },
+  { id: "p2", name: "Test Intervals", work: 30, rest: 15, reps: 10 },
+  { id: "p3", name: "Test HIIT", work: 45, rest: 10, reps: 8 },
+];
+
+async function seedPresets(page: Page, presets: SeedPreset[] | string): Promise<void> {
+  const value = typeof presets === "string" ? presets : JSON.stringify({ version: 1, presets });
+  await page.addInitScript((v) => {
+    if (localStorage.getItem("timer-presets") === null) localStorage.setItem("timer-presets", v);
+  }, value);
+}
+
+test.describe("Presets", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+  });
+
   test("ArrowRight cycles to next preset on idle screen", async ({ page }) => {
     // Default preset: work=1:00, rest=0:00, reps=x10
     await expect(page.getByTestId("config-card-work")).toContainText("1:00");
@@ -1436,80 +1538,477 @@ test.describe("Keyboard shortcuts", () => {
     await expect(dots.nth(1)).toHaveClass(/active/);
     await expect(page.getByTestId("config-card-work")).toContainText("0:30");
   });
+});
 
-  test("H returns to home screen when finished", async ({ page }) => {
+test.describe("Preset storage", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  test("empty storage shows the defaults and no preset dots", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:00");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+  });
+
+  test("the first stored preset is applied on load", async ({ page }) => {
+    await seedPresets(page, [
+      { id: "s1", name: "Seeded", work: 45, rest: 20, reps: 4 },
+      { id: "s2", name: "Other", work: 30, rest: 15, reps: 3 },
+    ]);
+    await page.goto("/");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await expect(page.getByTestId("config-card-rest")).toContainText("0:20");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x4");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(2);
+  });
+
+  test("stored presets survive a reload", async ({ page }) => {
+    await seedPresets(page, [{ id: "s1", name: "Seeded", work: 45, rest: 20, reps: 4 }]);
+    await page.goto("/");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await page.reload();
+    await expect(page.getByTestId("config-card-work")).toContainText("0:45");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(1);
+  });
+
+  test("a corrupt stored value loads as no presets without a page error", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+    await seedPresets(page, "{not json");
+    await page.goto("/");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+test.describe("Preset bar and sheet", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  async function changeWorkTo30(page: Page): Promise<void> {
     await page.getByTestId("config-card-work").click();
-    await page.getByTestId("ruler-tick-5").click({ force: true });
-    await page.getByTestId("config-card-repeat").click();
-    await page.getByTestId("ruler-tick-1").click({ force: true });
+    await page.getByTestId("ruler-tick-30").click({ force: true });
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+  }
 
-    await page.getByTestId("play-button").click();
-    await page.clock.fastForward(16000);
-    await expect(page.locator(".app")).toHaveClass(/finished/);
+  test("empty state: the bar saves the current settings as a preset", async ({ page }) => {
+    await page.goto("/");
+    const bar = page.getByTestId("preset-bar");
+    await expect(bar).toContainText("Save as preset");
+    await bar.click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("1:00 / 0:00 × 10");
+    await page.getByTestId("preset-name-save").click();
 
-    await page.keyboard.press("h");
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(bar).toContainText("1:00 / 0:00 × 10");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(1);
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("1:00 / 0:00 × 10");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(1);
   });
 
-  test("H returns to home screen when paused", async ({ page }) => {
-    await page.getByTestId("play-button").click();
-    await page.keyboard.press("Space");
-    await expect(page.locator(".app")).toHaveClass(/paused/);
-
-    await page.keyboard.press("h");
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  test("a typed name is saved, and Enter submits", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-input").fill("5 Hangs");
+    await page.getByTestId("preset-name-input").press("Enter");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("5 Hangs");
   });
 
-  test("H does nothing on idle screen or while running", async ({ page }) => {
-    // H on idle — should stay on home screen
-    await page.keyboard.press("h");
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  test("changing a card marks the preset edited; Update saves it", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const bar = page.getByTestId("preset-bar");
+    await expect(bar).toContainText("Test EMOM");
+    await expect(bar).not.toContainText("edited");
 
-    // H while running — should stay on active screen
-    await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("active-screen")).toBeVisible();
-    await page.keyboard.press("h");
-    await expect(page.getByTestId("active-screen")).toBeVisible();
+    // Update is only offered once the preset has been edited
+    await bar.click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet-update")).toHaveCount(0);
+    await page.getByTestId("preset-sheet-cancel").click();
+
+    await changeWorkTo30(page);
+    await expect(bar).toContainText("edited");
+
+    await bar.click();
+    await page.getByTestId("preset-sheet-update").click();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(bar).not.toContainText("edited");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("config-card-work")).toContainText("0:30");
   });
 
-  test("Escape does nothing on idle screen with no overlay", async ({ page }) => {
+  test("Save as new adds a preset and selects it", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await changeWorkTo30(page);
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-save-new").click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("0:30 / 0:00 × 10");
+    await page.getByTestId("preset-name-input").fill("Half EMOM");
+    await page.getByTestId("preset-name-save").click();
+
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots).toHaveCount(4);
+    await expect(dots.nth(3)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Half EMOM");
+    await expect(page.getByTestId("preset-bar")).not.toContainText("edited");
+
+    // The preset that was edited is untouched
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+  });
+
+  test("Rename persists", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    await expect(page.getByTestId("preset-name-input")).toHaveValue("Test EMOM");
+    await page.getByTestId("preset-name-input").fill("Morning EMOM");
+    await page.getByTestId("preset-name-save").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Morning EMOM");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Morning EMOM");
+  });
+
+  test("Delete needs a confirming tap and keeps the card values", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await expect(dots).toHaveCount(3);
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(dots).toHaveCount(2);
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("config-card-work")).toContainText("1:00");
+    await expect(page.getByTestId("config-card-repeat")).toContainText("x10");
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+  });
+
+  test("Cancel changes nothing", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const before = await page.evaluate(() => localStorage.getItem("timer-presets"));
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-cancel").click();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    expect(await page.evaluate(() => localStorage.getItem("timer-presets"))).toBe(before);
+  });
+
+  test("a blank name disables Save", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-input").fill("   ");
+    await expect(page.getByTestId("preset-name-save")).toBeDisabled();
+  });
+
+  test("a failed save shows the error and saves nothing", async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "timer-presets") throw new DOMException("full", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-name-save").click();
+    await expect(page.getByTestId("preset-sheet-error")).toContainText("Couldn't save");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+
+    await page.getByTestId("preset-sheet-cancel").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+  });
+
+  test("a swipe that starts on the bar cycles presets without opening the sheet", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const box = await page.getByTestId("preset-bar").boundingBox();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    await page.mouse.move(cx - 40, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(page.getByTestId("preset-dots").locator(".dot").nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+  });
+
+  test("Escape closes the sheet, including from the name field", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    await page.getByTestId("preset-name-input").press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+  });
+});
+
+test.describe("Reorder presets", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
   });
 
-  test("R restarts active workout", async ({ page }) => {
+  async function openReorder(page: Page): Promise<void> {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await expect(page.getByTestId("preset-reorder")).toBeVisible();
+  }
+
+  test("moving a preset down changes the cycling order and the active dot follows", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+
+    // Move the active "Test EMOM" from first to second: [Intervals, EMOM, HIIT]
+    await page.getByTestId("preset-move-down-0").click();
+    await expect(page.getByTestId("preset-reorder-row").nth(0)).toContainText("Test Intervals");
+    await expect(page.getByTestId("preset-reorder-row").nth(1)).toContainText("Test EMOM");
+    await page.getByTestId("preset-reorder-done").click();
+    await expect(page.getByTestId("preset-reorder")).toHaveCount(0);
+
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("the new order survives a reload", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+
+    // Move "Test HIIT" from last to second: [EMOM, HIIT, Intervals]
+    await page.getByTestId("preset-move-up-2").click();
+    await page.getByTestId("preset-reorder-done").click();
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("the first row cannot move up and the last row cannot move down", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+    await expect(page.getByTestId("preset-move-up-0")).toBeDisabled();
+    await expect(page.getByTestId("preset-move-down-2")).toBeDisabled();
+    await expect(page.getByTestId("preset-move-down-0")).toBeEnabled();
+    await expect(page.getByTestId("preset-move-up-2")).toBeEnabled();
+  });
+
+  test("Reorder is not offered with fewer than two presets", async ({ page }) => {
+    await seedPresets(page, [THREE_PRESETS[0]]);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet-reorder")).toHaveCount(0);
+  });
+
+  test("Escape closes the reorder screen", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-reorder")).toHaveCount(0);
+  });
+});
+
+test.describe("Preset shortcut", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+  });
+
+  test("P opens the preset sheet on the idle home screen, in either case", async ({ page }) => {
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+
+    await page.keyboard.press("P");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+  });
+
+  test("P does nothing while a picker is open or the timer runs", async ({ page }) => {
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("ruler-picker")).toHaveCount(0);
+
     await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await page.clock.fastForward(11000);
-    await expect(page.getByTestId("phase-label")).toHaveText("Work");
-
-    await page.keyboard.press("r");
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+    await expect(page.getByTestId("active-screen")).toBeVisible();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
   });
 
-  test("R restarts paused workout", async ({ page }) => {
-    await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-
-    await page.keyboard.press("Space"); // pause
-    await page.keyboard.press("r");
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  test("typing p in the name field enters the letter and leaves the sheet open", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-rename").click();
+    const input = page.getByTestId("preset-name-input");
+    await input.fill("");
+    await input.pressSequentially("pp");
+    await expect(input).toHaveValue("pp");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
   });
 
-  test("R is case-insensitive", async ({ page }) => {
-    await page.getByTestId("play-button").click();
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await page.clock.fastForward(11000);
-
-    await page.keyboard.press("Shift+r");
-    await expect(page.getByTestId("phase-label")).toHaveText("Get Ready!");
-    await expect(page.getByTestId("countdown-time")).toHaveText("00:10");
+  test("ArrowRight does not cycle presets while the sheet is open", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await expect(page.getByTestId("preset-dots").locator(".dot").nth(0)).toHaveClass(/active/);
   });
 
-  test("R does nothing on idle home screen", async ({ page }) => {
-    await page.keyboard.press("r");
-    await expect(page.getByTestId("config-card-work")).toBeVisible();
+  test("the shortcuts help lists P", async ({ page }) => {
+    await page.keyboard.press("?");
+    await expect(page.getByText("Presets (home screen)")).toBeVisible();
+  });
+});
+
+test.describe("Preset overlays: focus, safety and edge cases", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+  });
+
+  test("the page behind the sheet cannot be reached with the keyboard", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.getByTestId("play-button").focus();
+    await expect(page.getByTestId("play-button")).not.toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("active-screen")).toHaveCount(0);
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+  });
+
+  test("focus moves into the sheet and returns to the bar when it closes", async ({ page }) => {
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    expect(await page.evaluate(() => !!document.activeElement?.closest("#preset-sheet"))).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-bar")).toBeFocused();
+  });
+
+  test("the reorder list takes focus and the page behind it is inert", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await expect(page.getByTestId("preset-reorder-done")).toBeFocused();
+    await page.getByTestId("preset-bar").focus();
+    await expect(page.getByTestId("preset-bar")).not.toBeFocused();
+    await page.getByTestId("preset-reorder-done").click();
+    await expect(page.getByTestId("preset-bar")).toBeFocused();
+  });
+
+  test("a double tap on Delete does not delete", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    const box = await page.getByTestId("preset-sheet-delete").boundingBox();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await page.mouse.click(x, y);
+    await page.mouse.click(x, y);
+    await expect(page.getByTestId("preset-sheet-delete-confirm")).toBeVisible();
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(3);
+  });
+
+  test("after deleting the active preset, next goes to the first preset", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+  });
+
+  test("after deleting the active preset, previous goes to the last preset", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("deleting the only preset returns to the empty state", async ({ page }) => {
+    await page.evaluate(() =>
+      localStorage.setItem(
+        "timer-presets",
+        JSON.stringify({ version: 1, presets: [{ id: "only", name: "Only", work: 45, rest: 15, reps: 4 }] }),
+      ),
+    );
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Only");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+  });
+
+  test("a failed save while reordering shows the error and keeps the order", async ({ page }) => {
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "timer-presets") throw new DOMException("full", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await page.getByTestId("preset-move-down-0").click();
+    await expect(page.getByTestId("preset-reorder-error")).toContainText("Couldn't save");
+    await expect(page.getByTestId("preset-reorder-row").nth(0)).toContainText("Test EMOM");
+  });
+
+  test("P is ignored while the shortcuts help or the reorder list is open", async ({ page }) => {
+    await page.keyboard.press("?");
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-reorder")).toBeVisible();
   });
 });
