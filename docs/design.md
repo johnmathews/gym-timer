@@ -57,7 +57,7 @@ Three responsive breakpoints:
 - Config cards scale up: height `clamp(90px, 12vh, 160px)`, labels `clamp(2.5rem, 3.5vw, 4rem)` at weight 600, values up to `6rem`
 - Total time font: `clamp(7rem, 12vw, 20rem)` — sized to fit within a 50/50 grid column
 - Play button: `clamp(80px, 10vw, 160px)`
-- Toolbar icons: 36px (up from 28px on mobile)
+- Toolbar icons: 48px on the home screen, 36px on the active screen
 
 **`@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)`** — phone landscape:
 - Full-width (no max-width), compressed config cards (78px height)
@@ -137,11 +137,8 @@ The home screen supports cycling through preset timer configurations:
 - The list wraps around in both directions
 - A **dot indicator** below the config cards shows which preset is active (bright dot = current, dim dots = others)
 - Manual config changes (via pickers) are discarded when cycling to a new preset
-- Presets are defined in `src/lib/presets.ts` as an array of `{ work, rest, reps }` objects
-
-Current presets:
-1. Work 60s, Rest 0s, Reps 10 (default)
-2. Work 30s, Rest 15s, Reps 10
+- Presets are stored on the device in `localStorage` (see [presets.md](presets.md)); the app ships with none, and with none there are no dots and cycling does nothing
+- On load the first preset is applied; with no presets the cards show the defaults (1:00 work, 0:00 rest, x10)
 
 Swipe handling on the home screen excludes only the toolbar (volume, fullscreen) from swipe capture. Config cards participate in the gesture so swipes that begin on a card still cycle presets — the synthesized click that follows a swipe is consumed by a capture-phase click handler on `.home`, so the picker only opens on a real tap.
 

@@ -47,15 +47,7 @@ npm test
 
 ## Presets
 
-Workout presets are defined in `presets.yml` (name, work seconds, rest seconds, reps). Defaults are compiled into the JS bundle at build time.
-
-At runtime, the app fetches `/presets.yml` from the server. In Docker, mount a directory containing your custom `presets.yml` to `/config/` to override the defaults without rebuilding:
-
-```sh
-docker run -d -p 8080:80 -v /path/to/config:/config ghcr.io/johnmathews/gym-timer:latest
-```
-
-Edit the file on the host and reload the page to pick up changes.
+Workout presets (name, work, rest, reps) are created in the app and stored on the device in `localStorage`, so each browser or home-screen install keeps its own list. The app ships with none. See [docs/presets.md](docs/presets.md).
 
 ## Deployment
 
@@ -90,8 +82,6 @@ services:
     image: ghcr.io/johnmathews/gym-timer:latest
     ports:
       - "8080:80"
-    volumes:
-      - /path/to/config:/config  # optional: custom presets.yml
     restart: unless-stopped
 ```
 

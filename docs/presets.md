@@ -1,26 +1,10 @@
-# Built-in Workout Presets
+# Workout Presets
 
 ## Status
 
-Presets are **active** — users cycle through them on the home screen by swiping left/right (touch) or pressing Left/Right arrow keys (desktop). The preset list wraps around in both directions. A dot indicator below the config cards shows which preset is active.
+Presets are **active** and live **only on the device**: each browser, or each iOS home-screen install, keeps its own list in `localStorage`. The app ships with none. Users cycle through them on the home screen by swiping left/right (touch), swiping with two fingers (trackpad), or pressing Left/Right (desktop). The list wraps around in both directions, and a dot row below the config cards shows the position.
 
-## Presets
-
-Presets are defined in `presets.yml` at the project root. Each preset has a name, work duration (seconds), rest duration (seconds), and rep count:
-
-```yaml
-- name: EMOM
-  work: 60
-  rest: 0
-  reps: 10
-
-- name: Intervals
-  work: 30
-  rest: 15
-  reps: 10
-```
-
-The first preset is loaded by default on page load. All values should be within slider ranges (work 5-600s, rest 0-300s, reps 1-20) and aligned to the 5-second step grid for full slider compatibility.
+The legacy `presets.yml` pipeline (build-time YAML plus a runtime `/presets.yml` override mounted into the Docker container) was removed on 2026-09-13.
 
 ## Device Storage
 
@@ -38,65 +22,38 @@ The first preset is loaded by default on page load. All values should be within 
 - **Persistence:** `requestPersistence()` calls `navigator.storage.persist()` where the browser has it, which exempts the data from eviction when the device runs low on space. A home-screen web app already avoids Safari's 7-day storage cap, because opening the app resets it.
 - `summaryName()` formats values as `work / rest × reps` (e.g. `0:30 / 0:15 × 5`); the save dialog uses it to prefill the name.
 
-## Architecture
+## Loading and Cycling
 
-### Build-Time Defaults
+In `src/routes/+page.svelte`:
 
-1. **`presets.yml`** (project root) — default preset definitions compiled into the JS bundle
-2. **`@modyfi/vite-plugin-yaml`** — Vite plugin that transforms YAML imports into JS objects at build time
-3. **`$presets` alias** (vite.config.ts) — resolves to `presets.yml` in production or `tests/fixtures/presets.yml` during tests
-4. **`src/lib/presets.ts`** — imports via `$presets`, validates with `parsePresets()`, exports `DEFAULT_PRESETS`
+- On mount, `loadPresets()` reads the stored list. If it is non-empty, the first preset is applied (`duration`, `rest`, `reps`, then `timer.configure()`). If it is empty, the cards keep the defaults 1:00 / 0:00 / x10 and no dots render.
+- The page tracks the active preset by `id` (`activePresetId`), not by position, so reordering or removing other presets does not change which one is active.
+- `cyclePreset(direction)` moves to the next or previous preset with wraparound. With no active preset, next goes to the first preset and previous to the last.
+- Home-screen swipes use pointer events (50px threshold) with `touch-action: pan-y` on `.home` for iOS. Only the toolbar (volume, fullscreen) is excluded from swipe detection; config cards participate, and the synthesized click that follows a swipe is consumed by a capture-phase click handler so a picker does not open.
+- Trackpad swipes go through `wheel-gestures` (see [design.md](design.md#preset-cycling)).
+- Left/Right arrow keys cycle presets when `$status === "idle"` and no picker is open.
+- Manual card changes are discarded when cycling to another preset.
 
-### Runtime Override
+## Dot Indicator
 
-On page load, the app fetches `/presets.yml` from the server. If a valid YAML file is served (e.g., from a Docker volume mount), those presets replace the build-time defaults. If the fetch fails (404, parse error), the app silently uses the compiled defaults.
+- Rendered inside the `.cards` div, below the Repeat card, one dot per stored preset
+- Each dot is a `<span class="dot">`; the active dot is brighter (`rgba(255,255,255,0.85)`) than the others (`rgba(255,255,255,0.25)`)
+- Dots use a CSS transition for smooth visual feedback
 
-- **`fetchPresets()`** in `src/lib/presets.ts` — fetches `/presets.yml`, parses with `js-yaml`, validates with `parsePresets()`
-- **nginx.conf** — `location = /presets.yml` serves `/config/presets.yml` with `no-store` caching
+## Test Seeding
 
-### Docker Deployment
+Playwright starts every test with a clean browser profile, so presets start empty. Tests that need presets write the storage key before the page loads:
 
-Mount a **directory** containing `presets.yml` to `/config/` in the container:
-
-```yaml
-volumes:
-  - ./timer:/config
+```ts
+await page.addInitScript((value) => {
+  if (localStorage.getItem("timer-presets") === null) localStorage.setItem("timer-presets", value);
+}, JSON.stringify({ version: 1, presets }));
+await page.goto("/");
 ```
 
-**Important:** Mount the directory, not the file directly. Docker bind mounts of individual files don't update when the host file is edited — most editors create a new inode, breaking the bind mount. Directory mounts always reflect the current file content.
-
-### `src/lib/presets.ts`
-
-- `Preset` interface: `{ name, work, rest, reps }`
-- `parsePresets(data)` — validates and returns typed presets from raw YAML data. Checks types, non-empty array, positive integers, etc.
-- `DEFAULT_PRESETS` — build-time preset array, compiled from `presets.yml`
-- `fetchPresets()` — async function that fetches runtime presets from the server
-
-### Cycling Logic (`src/routes/+page.svelte`)
-
-- `presets` reactive state, initialized with `DEFAULT_PRESETS`, updated on mount if runtime fetch succeeds
-- `presetIndex` state tracks the current preset (starts at 0)
-- `applyPreset(index)` sets `duration`, `rest`, `reps` from the preset and calls `timer.configure()`
-- `cyclePreset(direction)` increments/decrements the index with modular wrapping
-- Home screen swipe handling uses pointer events (50px threshold) with `touch-action: pan-y` on the `.home` element for iOS compatibility
-- Left/Right arrow keys cycle presets when `$status === "idle"` and no picker is open
-- Only the toolbar (volume, fullscreen) is excluded from swipe detection. Config cards participate in swipe capture, and a synthesized click on a card following a swipe is suppressed via a capture-phase click handler so the picker does not open.
-
-### Dot Indicator
-
-- Rendered inside `.cards` div, below the Repeat card
-- Each dot is a `<span class="dot">` — active dot is brighter (`rgba(255,255,255,0.85)`) vs inactive (`rgba(255,255,255,0.25)`)
-- Dots use CSS transition for smooth visual feedback
-
-## Test Isolation
-
-Tests use a separate `tests/fixtures/presets.yml` instead of the real `presets.yml`, so editing the production presets file never breaks tests:
-
-- **Vite alias**: `$presets` points to `tests/fixtures/presets.yml` when `VITEST` or `TEST_PRESETS` env var is set
-- **Unit tests**: run under vitest (sets `VITEST` automatically)
-- **E2e tests**: playwright.config.ts builds with `TEST_PRESETS=1`
+The `getItem` guard matters: `addInitScript` runs again on every navigation, including `page.reload()`, and an unguarded write would overwrite whatever the test just saved.
 
 ## Test Coverage
 
-- **Unit tests** (`src/lib/presets.test.ts`): `parsePresets()` validation (valid data, missing fields, bad types, empty arrays), plus fixture validation (slider ranges, 5s grid, unique combinations, expected defaults)
-- **E2E tests** (`tests/timer.test.ts`): arrow key cycling, wraparound, dot indicator state updates
+- **Unit** (`src/lib/presetStore.test.ts`): loading and validation, saving and save failures, every pure operation, id generation, the persistence request, and the default-storage paths.
+- **E2e** (`tests/timer.test.ts`): empty-storage defaults, seeded presets loading and surviving a reload, corrupt storage loading as empty, arrow/swipe/wheel cycling and wraparound, and the dot indicator.

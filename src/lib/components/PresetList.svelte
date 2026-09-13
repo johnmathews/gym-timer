@@ -1,5 +1,5 @@
 <script lang="ts">
- import type { Preset } from '$lib/presets';
+ import type { Preset } from '$lib/presetStore';
 
  interface Props {
   presets: Preset[];

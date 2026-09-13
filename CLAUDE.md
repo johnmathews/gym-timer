@@ -17,15 +17,13 @@
 - Requires Node 22+ (use `nvm use 22`)
 
 ## Key Files
-- `presets.yml` — workout preset definitions (name, work, rest, reps); build-time defaults + runtime override via Docker mount
 - `src/lib/timer.ts` — timer logic (stores, pure functions, sound effects)
-- `src/lib/presets.ts` — exports `DEFAULT_PRESETS` (build-time), `fetchPresets()` (runtime from `/presets.yml`), `parsePresets()` (validation)
+- `src/lib/presetStore.ts` — on-device presets: `loadPresets()` / `savePresets()` (localStorage) plus pure add/update/rename/remove/move operations
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetList, KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 133 unit tests
-- `src/lib/presets.test.ts` — 24 preset/parsePresets/fetchPresets tests
+- `src/lib/presetStore.test.ts` — preset store unit tests
 - `tests/timer.test.ts` — 92 e2e tests (Playwright)
-- `tests/fixtures/presets.yml` — test preset fixture (isolates tests from production presets.yml changes)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases
@@ -38,10 +36,10 @@
 - Home screen preset cycling: swipe left/right (touch) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
 
 ## Presets
-- Build-time defaults from `presets.yml` are compiled into the JS bundle via `@modyfi/vite-plugin-yaml`
-- At runtime, the app fetches `/presets.yml` from the server; if a mounted config exists, it overrides defaults
-- Docker deployment: mount the directory containing `presets.yml` to `/config/` (not a single file — inode issues)
-- Edit the file on the host and reload the page to update presets without redeploying
+- Presets live only on the device, in `localStorage` key `timer-presets` (versioned JSON envelope); see `docs/presets.md`
+- `savePresets()` returns `{ ok, error }` and never fails silently; callers keep their previous state and show the error
+- The app ships with no presets; with none, the cards show the defaults (1:00 / 0:00 / x10)
+- E2e tests seed presets by writing `timer-presets` in `page.addInitScript` before `page.goto`
 
 ## Deployment
 - Production is deployed on the infra VM as part of its Docker Compose stack

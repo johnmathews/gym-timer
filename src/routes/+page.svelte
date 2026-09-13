@@ -16,7 +16,7 @@
   toggleMute,
  } from "$lib/timer";
  import { log } from "$lib/logger";
- import { DEFAULT_PRESETS, fetchPresets } from "$lib/presets";
+ import { loadPresets, type Preset } from "$lib/presetStore";
  import { WheelGestures, type WheelEventState } from "wheel-gestures";
  import ConfigCard from "$lib/components/ConfigCard.svelte";
  import RulerPicker from "$lib/components/RulerPicker.svelte";
@@ -47,8 +47,8 @@
  let prevRep: number = 1;
  let prevRemaining: number = 0;
 
- let presets = $state(DEFAULT_PRESETS);
- let presetIndex = $state(0);
+ let presets: Preset[] = $state([]);
+ let activePresetId: string | null = $state(null);
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
  let pickerOriginalValue = $state(0);
@@ -94,15 +94,9 @@
   log("mount", { duration, rest, reps });
   timer.configure(duration, rest, reps);
 
-  // Load runtime presets from server (mounted config file)
-  fetchPresets().then((fetched) => {
-   if (fetched) {
-    presets = fetched;
-    presetIndex = 0;
-    applyPreset(0);
-    log("presets:runtime", { count: fetched.length });
-   }
-  });
+  presets = loadPresets();
+  log("presets:load", { count: presets.length });
+  if (presets.length > 0) applyPreset(presets[0]);
 
   function handleVisibility() {
    if (document.visibilityState === "visible") {
@@ -230,19 +224,28 @@
   timer.reset();
  }
 
- // Preset cycling
- function applyPreset(index: number) {
-  const preset = presets[index];
+ // Preset cycling. The active preset is tracked by id, not position, so
+ // reordering or removing other presets never changes which one is active.
+ function applyPreset(preset: Preset) {
+  activePresetId = preset.id;
   duration = preset.work;
   rest = preset.rest;
   reps = preset.reps;
   timer.configure(duration, rest, reps);
-  log("preset:apply", { index, ...preset });
+  log("preset:apply", { ...preset });
  }
 
  function cyclePreset(direction: 1 | -1) {
-  presetIndex = (((presetIndex + direction) % presets.length) + presets.length) % presets.length;
-  applyPreset(presetIndex);
+  if (presets.length === 0) return;
+  const current = presets.findIndex((p) => p.id === activePresetId);
+  // With no active preset, next starts at the first and previous at the last
+  const next =
+   current === -1
+    ? direction === 1
+     ? 0
+     : presets.length - 1
+    : (current + direction + presets.length) % presets.length;
+  applyPreset(presets[next]);
  }
 
  // Home screen swipe handling
@@ -539,8 +542,8 @@
     <ConfigCard label="Rest" value={displayTime(rest)} color="#E8450E" onclick={() => openPicker("rest")} />
     <ConfigCard label="Repeat" value={`x${reps}`} color="#3498DB" onclick={() => openPicker("repeat")} />
     <div class="preset-dots" data-testid="preset-dots">
-     {#each presets as _, i (i)}
-      <span class="dot" class:active={i === presetIndex}></span>
+     {#each presets as preset (preset.id)}
+      <span class="dot" class:active={preset.id === activePresetId}></span>
      {/each}
     </div>
    </div>
