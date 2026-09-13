@@ -12,10 +12,14 @@
   oncreate: (name: string) => SaveResult;
   onrename: (name: string) => SaveResult;
   ondelete: () => SaveResult;
+  /** Offer "Reorder…" (the page passes true with two or more presets) */
+  canReorder: boolean;
+  onreorder: () => void;
   onclose: () => void;
  }
 
- let { activeName, edited, defaultName, onupdate, oncreate, onrename, ondelete, onclose }: Props = $props();
+ let { activeName, edited, defaultName, onupdate, oncreate, onrename, ondelete, canReorder, onreorder, onclose }: Props =
+  $props();
 
  // The page remounts the sheet on every open, so these deliberately snapshot the props.
  // With no active preset the only action is saving one, so open straight on the name field.
@@ -74,6 +78,9 @@
    <button class="item" id="preset-sheet-rename" data-testid="preset-sheet-rename" onclick={() => openNameField("rename")}>
     Rename…
    </button>
+   {#if canReorder}
+    <button class="item" id="preset-sheet-reorder" data-testid="preset-sheet-reorder" onclick={onreorder}>Reorder…</button>
+   {/if}
    {#if confirmingDelete}
     <button class="item danger" id="preset-sheet-delete-confirm" data-testid="preset-sheet-delete-confirm" onclick={() => finish(ondelete())}>
      Confirm delete

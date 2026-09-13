@@ -1771,3 +1771,76 @@ test.describe("Preset bar and sheet", () => {
     await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
   });
 });
+
+test.describe("Reorder presets", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  async function openReorder(page: Page): Promise<void> {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await expect(page.getByTestId("preset-reorder")).toBeVisible();
+  }
+
+  test("moving a preset down changes the cycling order and the active dot follows", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+
+    // Move the active "Test EMOM" from first to second: [Intervals, EMOM, HIIT]
+    await page.getByTestId("preset-move-down-0").click();
+    await expect(page.getByTestId("preset-reorder-row").nth(0)).toContainText("Test Intervals");
+    await expect(page.getByTestId("preset-reorder-row").nth(1)).toContainText("Test EMOM");
+    await page.getByTestId("preset-reorder-done").click();
+    await expect(page.getByTestId("preset-reorder")).toHaveCount(0);
+
+    const dots = page.getByTestId("preset-dots").locator(".dot");
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("the new order survives a reload", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+
+    // Move "Test HIIT" from last to second: [EMOM, HIIT, Intervals]
+    await page.getByTestId("preset-move-up-2").click();
+    await page.getByTestId("preset-reorder-done").click();
+
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Test EMOM");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("the first row cannot move up and the last row cannot move down", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+    await expect(page.getByTestId("preset-move-up-0")).toBeDisabled();
+    await expect(page.getByTestId("preset-move-down-2")).toBeDisabled();
+    await expect(page.getByTestId("preset-move-down-0")).toBeEnabled();
+    await expect(page.getByTestId("preset-move-up-2")).toBeEnabled();
+  });
+
+  test("Reorder is not offered with fewer than two presets", async ({ page }) => {
+    await seedPresets(page, [THREE_PRESETS[0]]);
+    await page.goto("/");
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await expect(page.getByTestId("preset-sheet-reorder")).toHaveCount(0);
+  });
+
+  test("Escape closes the reorder screen", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    await openReorder(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-reorder")).toHaveCount(0);
+  });
+});

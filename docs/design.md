@@ -149,13 +149,14 @@ Swipe handling on the home screen excludes only the toolbar (volume, fullscreen)
   - **Update "name"** (only when edited) overwrites the active preset with the current values
   - **Save as new preset…** opens the name field prefilled with a summary such as `0:30 / 0:15 × 5`; the new preset is appended and becomes active
   - **Rename…** opens the name field prefilled with the current name
+  - **Reorder…** (shown with two or more presets) opens a full-screen list (`#preset-reorder`, `PresetList.svelte`) with up/down buttons on each row; every move is saved at once, and Done or Escape returns to the home screen
   - **Delete "name"** turns into a confirm button; deleting keeps the card values and clears the selection
   - **Cancel**, a tap on the backdrop, or Escape closes the sheet
 - With no active preset, tapping the bar goes straight to the name field.
 - The name field trims its input, allows 1–40 characters, disables Save when blank, and saves on Enter.
-- If saving fails (storage full or disabled), the sheet stays open with the error and nothing changes.
+- If saving fails (storage full or disabled), the sheet or list stays open with the error and nothing changes.
 - A swipe that starts on the bar cycles presets like one that starts on a card; the click that follows the swipe is suppressed, so the sheet does not open.
-- While the sheet is open, arrow keys, Space and Enter do not act on the timer or cycle presets.
+- While the sheet or the reorder list is open, arrow keys, Space and Enter do not act on the timer or cycle presets.
 
 ## Config Cards
 

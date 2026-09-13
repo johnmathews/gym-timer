@@ -23,6 +23,7 @@
   updatePreset,
   renamePreset,
   removePreset,
+  movePreset,
   matchesValues,
   summaryName,
   requestPersistence,
@@ -40,6 +41,7 @@
  import KeyboardShortcuts from "$lib/components/KeyboardShortcuts.svelte";
  import PresetBar from "$lib/components/PresetBar.svelte";
  import PresetSheet from "$lib/components/PresetSheet.svelte";
+ import PresetList from "$lib/components/PresetList.svelte";
 
  interface WebkitDocument extends Document {
   webkitFullscreenElement?: Element | null;
@@ -64,6 +66,8 @@
  let presets: Preset[] = $state([]);
  let activePresetId: string | null = $state(null);
  let presetSheetOpen = $state(false);
+ let reorderOpen = $state(false);
+ let reorderError: string | null = $state(null);
  let persistenceRequested = false;
 
  let activePicker: "work" | "rest" | "repeat" | null = $state(null);
@@ -301,6 +305,17 @@
   return commitPresets(removePreset(presets, activePresetId), null);
  }
 
+ function openReorder() {
+  presetSheetOpen = false;
+  reorderError = null;
+  reorderOpen = true;
+ }
+
+ function handlePresetMove(id: string, direction: -1 | 1) {
+  const result = commitPresets(movePreset(presets, id, direction), activePresetId);
+  reorderError = result.ok ? null : result.error;
+ }
+
  // Home screen swipe handling
  let homeSwipeStartX = 0;
  let homeSwipeStartY = 0;
@@ -482,7 +497,7 @@
    return;
   }
 
-  // Escape: close shortcuts modal, then preset sheet, then picker, then go home from any workout state
+  // Escape: close shortcuts modal, then preset sheet or reorder list, then picker, then go home from any workout state
   if (e.key === "Escape" && !document.fullscreenElement) {
    if (showShortcuts) {
     e.preventDefault();
@@ -492,6 +507,11 @@
    if (presetSheetOpen) {
     e.preventDefault();
     presetSheetOpen = false;
+    return;
+   }
+   if (reorderOpen) {
+    e.preventDefault();
+    reorderOpen = false;
     return;
    }
    if (activePicker) {
@@ -521,8 +541,8 @@
    return;
   }
 
-  // Timer controls only apply when no picker or preset sheet is open
-  if (activePicker || presetSheetOpen) return;
+  // Timer controls only apply when no picker, preset sheet or reorder list is open
+  if (activePicker || presetSheetOpen || reorderOpen) return;
 
   const isPlayPauseKey = e.key === " " || e.key === "Enter";
 
@@ -742,8 +762,13 @@
    oncreate={handlePresetCreate}
    onrename={handlePresetRename}
    ondelete={handlePresetDelete}
+   canReorder={presets.length >= 2}
+   onreorder={openReorder}
    onclose={() => (presetSheetOpen = false)}
   />
+ {/if}
+ {#if reorderOpen}
+  <PresetList {presets} error={reorderError} onmove={handlePresetMove} onclose={() => (reorderOpen = false)} />
  {/if}
  <KeyboardShortcuts open={showShortcuts} onclose={() => (showShortcuts = false)} />
 </main>
