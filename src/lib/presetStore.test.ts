@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   PRESETS_STORAGE_KEY,
+  PRESETS_BACKUP_KEY,
   MAX_NAME_LENGTH,
   type Preset,
   loadPresets,
@@ -114,6 +115,41 @@ describe("loadPresets", () => {
     const storage = new MemoryStorage();
     storage.setItem(PRESETS_STORAGE_KEY, envelope([a, { ...b, id: "a" }, c]));
     expect(loadPresets(storage)).toEqual([a, c]);
+  });
+});
+
+describe("backup of unreadable storage", () => {
+  it("copies an unparseable value to the backup key before it can be overwritten", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(PRESETS_STORAGE_KEY, "{not json");
+    expect(loadPresets(storage)).toEqual([]);
+    expect(storage.getItem(PRESETS_BACKUP_KEY)).toBe("{not json");
+  });
+
+  it("copies a value with an unknown version to the backup key", () => {
+    const storage = new MemoryStorage();
+    const future = envelope([a], 2);
+    storage.setItem(PRESETS_STORAGE_KEY, future);
+    expect(loadPresets(storage)).toEqual([]);
+    expect(storage.getItem(PRESETS_BACKUP_KEY)).toBe(future);
+  });
+
+  it("writes no backup for a missing key or a valid envelope", () => {
+    const storage = new MemoryStorage();
+    loadPresets(storage);
+    storage.setItem(PRESETS_STORAGE_KEY, envelope([a]));
+    loadPresets(storage);
+    expect(storage.getItem(PRESETS_BACKUP_KEY)).toBeNull();
+  });
+
+  it("still loads as empty when the backup write fails", () => {
+    const storage = {
+      getItem: () => "{not json",
+      setItem: () => {
+        throw new DOMException("quota", "QuotaExceededError");
+      },
+    };
+    expect(loadPresets(storage)).toEqual([]);
   });
 });
 

@@ -10,6 +10,10 @@
  }
 
  let { presets, error, onmove, onclose }: Props = $props();
+
+ function focusOnMount(node: HTMLElement) {
+  node.focus();
+ }
 </script>
 
 <div class="overlay" id="preset-reorder" data-testid="preset-reorder" role="dialog" aria-modal="true" aria-labelledby="preset-reorder-title">
@@ -54,7 +58,7 @@
   {/if}
 
   <div class="footer">
-   <button class="done-btn" id="preset-reorder-done" data-testid="preset-reorder-done" onclick={onclose}>Done</button>
+   <button class="done-btn" id="preset-reorder-done" data-testid="preset-reorder-done" onclick={onclose} use:focusOnMount>Done</button>
   </div>
  </div>
 </div>

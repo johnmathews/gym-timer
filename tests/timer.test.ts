@@ -1901,3 +1901,114 @@ test.describe("Preset shortcut", () => {
     await expect(page.getByText("Presets (home screen)")).toBeVisible();
   });
 });
+
+test.describe("Preset overlays: focus, safety and edge cases", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+  });
+
+  test("the page behind the sheet cannot be reached with the keyboard", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    await page.getByTestId("play-button").focus();
+    await expect(page.getByTestId("play-button")).not.toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("active-screen")).toHaveCount(0);
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+  });
+
+  test("focus moves into the sheet and returns to the bar when it closes", async ({ page }) => {
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toBeVisible();
+    expect(await page.evaluate(() => !!document.activeElement?.closest("#preset-sheet"))).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("preset-bar")).toBeFocused();
+  });
+
+  test("the reorder list takes focus and the page behind it is inert", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await expect(page.getByTestId("preset-reorder-done")).toBeFocused();
+    await page.getByTestId("preset-bar").focus();
+    await expect(page.getByTestId("preset-bar")).not.toBeFocused();
+    await page.getByTestId("preset-reorder-done").click();
+    await expect(page.getByTestId("preset-bar")).toBeFocused();
+  });
+
+  test("a double tap on Delete does not delete", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    const box = await page.getByTestId("preset-sheet-delete").boundingBox();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await page.mouse.click(x, y);
+    await page.mouse.click(x, y);
+    await expect(page.getByTestId("preset-sheet-delete-confirm")).toBeVisible();
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(3);
+  });
+
+  test("after deleting the active preset, next goes to the first preset", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test Intervals");
+  });
+
+  test("after deleting the active preset, previous goes to the last preset", async ({ page }) => {
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByTestId("preset-bar")).toContainText("Test HIIT");
+  });
+
+  test("deleting the only preset returns to the empty state", async ({ page }) => {
+    await page.evaluate(() =>
+      localStorage.setItem(
+        "timer-presets",
+        JSON.stringify({ version: 1, presets: [{ id: "only", name: "Only", work: 45, rest: 15, reps: 4 }] }),
+      ),
+    );
+    await page.reload();
+    await expect(page.getByTestId("preset-bar")).toContainText("Only");
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-delete").click();
+    await page.getByTestId("preset-sheet-delete-confirm").click();
+    await expect(page.getByTestId("preset-bar")).toContainText("Save as preset");
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId("preset-dots").locator(".dot")).toHaveCount(0);
+  });
+
+  test("a failed save while reordering shows the error and keeps the order", async ({ page }) => {
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === "timer-presets") throw new DOMException("full", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await page.getByTestId("preset-move-down-0").click();
+    await expect(page.getByTestId("preset-reorder-error")).toContainText("Couldn't save");
+    await expect(page.getByTestId("preset-reorder-row").nth(0)).toContainText("Test EMOM");
+  });
+
+  test("P is ignored while the shortcuts help or the reorder list is open", async ({ page }) => {
+    await page.keyboard.press("?");
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("preset-bar").click();
+    await page.getByTestId("preset-sheet-reorder").click();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("preset-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("preset-reorder")).toBeVisible();
+  });
+});

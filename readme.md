@@ -1,6 +1,6 @@
 # Timer
 
-A workout interval timer web app with configurable work/rest durations, rep counts, and preset workouts. Features audio cues (bells, chimes, countdown dings, fanfare), color-coded phases, keyboard shortcuts, and wake lock support.
+A workout interval timer web app with configurable work/rest durations, rep counts, and presets you save on the device. Features audio cues (bells, chimes, countdown dings, fanfare), color-coded phases, keyboard shortcuts, and wake lock support.
 
 Built with SvelteKit as a static site, designed for touch interfaces and optimized for mobile/iOS.
 
@@ -44,6 +44,15 @@ npm run test:e2e
 # All tests
 npm test
 ```
+
+## Documentation
+
+- [Timer engine](docs/timer-engine.md): phases, the wall-clock timeline, pause/resume and skipping
+- [Audio](docs/audio.md): sound cues, volume and iOS audio-session handling
+- [Design](docs/design.md): layout, colours, gestures, the preset bar and sheet, and keyboard shortcuts
+- [Presets](docs/presets.md): on-device preset storage, cycling, editing and test seeding
+- [Slider scales](docs/slider-scales.md): the value steps used by the Work, Rest and Repeat pickers
+- [Wake lock](docs/wake-lock.md): keeping the screen on during a workout
 
 ## Presets
 

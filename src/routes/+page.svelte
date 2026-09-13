@@ -1,5 +1,5 @@
 <script lang="ts">
- import { onMount, onDestroy } from "svelte";
+ import { onMount, onDestroy, tick } from "svelte";
  import {
   createTimer,
   playFinishSound,
@@ -305,6 +305,13 @@
   return commitPresets(removePreset(presets, activePresetId), null);
  }
 
+ // Closing either overlay hands focus back to the name bar
+ function closePresetOverlays() {
+  presetSheetOpen = false;
+  reorderOpen = false;
+  void tick().then(() => document.getElementById("preset-bar")?.focus());
+ }
+
  function openReorder() {
   presetSheetOpen = false;
   reorderError = null;
@@ -446,7 +453,7 @@
   return `x${val}`;
  }
 
- // Non-uniform time scale: 5s steps up to 1min, 15s to 3min, 30s to max
+ // Non-uniform time scale: 5s steps below 1 min, 10s steps below 5 min, 30s steps above
  function generateTimeValues(min: number, max: number): number[] {
   const result: number[] = [];
   let v = min;
@@ -504,14 +511,9 @@
     showShortcuts = false;
     return;
    }
-   if (presetSheetOpen) {
+   if (presetSheetOpen || reorderOpen) {
     e.preventDefault();
-    presetSheetOpen = false;
-    return;
-   }
-   if (reorderOpen) {
-    e.preventDefault();
-    reorderOpen = false;
+    closePresetOverlays();
     return;
    }
    if (activePicker) {
@@ -626,6 +628,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
    class="home"
+   inert={presetSheetOpen || reorderOpen || undefined}
    bind:this={homeContainer}
    onpointerdown={handleHomePointerDown}
    onpointermove={handleHomePointerMove}
@@ -781,11 +784,11 @@
    ondelete={handlePresetDelete}
    canReorder={presets.length >= 2}
    onreorder={openReorder}
-   onclose={() => (presetSheetOpen = false)}
+   onclose={closePresetOverlays}
   />
  {/if}
  {#if reorderOpen}
-  <PresetList {presets} error={reorderError} onmove={handlePresetMove} onclose={() => (reorderOpen = false)} />
+  <PresetList {presets} error={reorderError} onmove={handlePresetMove} onclose={closePresetOverlays} />
  {/if}
  <KeyboardShortcuts open={showShortcuts} onclose={() => (showShortcuts = false)} />
 </main>

@@ -25,10 +25,12 @@ The wake lock logic is inlined in `src/routes/+page.svelte` using a Svelte 5 `$e
 
 ```typescript
 $effect(() => {
-  if (isActive && canWakeLock) {
-    acquireWakeLock();
+  if (isActive) {
+    if (canWakeLock) acquireWakeLock();
+    startKeepAlive();
   } else {
     releaseWakeLock();
+    stopKeepAlive();
   }
 });
 ```
@@ -36,6 +38,7 @@ $effect(() => {
 - `canWakeLock` is set to `true` on mount if `navigator.wakeLock` is available
 - `acquireWakeLock()` calls `navigator.wakeLock.request("screen")` and attaches a release listener
 - `releaseWakeLock()` calls `sentinel.release()` on the stored `WakeLockSentinel`
+- The same effect starts and stops the audio keepalive (`startKeepAlive()` / `stopKeepAlive()` in `src/lib/timer.ts`), which keeps iOS from reclaiming the audio session during a workout
 
 ## Browser Support
 

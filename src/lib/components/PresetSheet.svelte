@@ -27,6 +27,7 @@
  let view: "actions" | "create" | "rename" = $state(startOnName ? "create" : "actions");
  let nameValue = $state(untrack(() => (startOnName ? defaultName : "")));
  let confirmingDelete = $state(false);
+ let confirmReady = $state(false);
  let error: string | null = $state(null);
 
  const canSave = $derived(normalizeName(nameValue) !== null);
@@ -60,11 +61,23 @@
   node.focus();
   node.select();
  }
+
+ // Move focus into the sheet: the name field in the name view, otherwise the first action
+ function focusFirstControl(node: HTMLElement) {
+  node.querySelector<HTMLElement>("input, button.item")?.focus();
+ }
+
+ // Confirm replaces Delete in the same spot, so it starts disabled: a quick double tap must not delete
+ function armDelete() {
+  confirmingDelete = true;
+  confirmReady = false;
+  setTimeout(() => (confirmReady = true), 500);
+ }
 </script>
 
 <div class="sheet-root" id="preset-sheet" data-testid="preset-sheet">
  <button class="backdrop" aria-label="Close preset menu" tabindex="-1" onclick={onclose}></button>
- <div class="panel" role="dialog" aria-modal="true" aria-labelledby="preset-sheet-title">
+ <div class="panel" role="dialog" aria-modal="true" aria-labelledby="preset-sheet-title" use:focusFirstControl>
   {#if view === "actions"}
    <h2 class="title" id="preset-sheet-title">{activeName}</h2>
    {#if edited}
@@ -82,11 +95,17 @@
     <button class="item" id="preset-sheet-reorder" data-testid="preset-sheet-reorder" onclick={onreorder}>Reorder…</button>
    {/if}
    {#if confirmingDelete}
-    <button class="item danger" id="preset-sheet-delete-confirm" data-testid="preset-sheet-delete-confirm" onclick={() => finish(ondelete())}>
+    <button
+     class="item danger"
+     id="preset-sheet-delete-confirm"
+     data-testid="preset-sheet-delete-confirm"
+     disabled={!confirmReady}
+     onclick={() => finish(ondelete())}
+    >
      Confirm delete
     </button>
    {:else}
-    <button class="item danger-text" id="preset-sheet-delete" data-testid="preset-sheet-delete" onclick={() => (confirmingDelete = true)}>
+    <button class="item danger-text" id="preset-sheet-delete" data-testid="preset-sheet-delete" onclick={armDelete}>
      Delete “{activeName}”
     </button>
    {/if}

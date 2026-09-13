@@ -1,6 +1,7 @@
 import { log } from "./logger";
 
 export const PRESETS_STORAGE_KEY = "timer-presets";
+export const PRESETS_BACKUP_KEY = "timer-presets-backup";
 export const STORAGE_VERSION = 1;
 export const MAX_NAME_LENGTH = 40;
 
@@ -15,7 +16,7 @@ export interface Preset {
 export type PresetValues = Pick<Preset, "work" | "rest" | "reps">;
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
-type ReadableStorage = Pick<Storage, "getItem">;
+type ReadableStorage = Pick<Storage, "getItem"> & Partial<Pick<Storage, "setItem">>;
 type WritableStorage = Pick<Storage, "setItem">;
 type CryptoLike = { randomUUID?: () => string };
 type NavigatorLike = { storage?: { persist?: () => Promise<boolean> } };
@@ -63,6 +64,18 @@ function requireValues(values: PresetValues): PresetValues {
   return { work: values.work, rest: values.rest, reps: values.reps };
 }
 
+/**
+ * Keep an unreadable stored value (e.g. a newer format read by an older cached app)
+ * so the next save, which overwrites the main key, cannot destroy it.
+ */
+function backupUnreadable(storage: ReadableStorage, raw: string): void {
+  try {
+    storage.setItem?.(PRESETS_BACKUP_KEY, raw);
+  } catch {
+    // Best effort: a failed backup must not stop the app from loading
+  }
+}
+
 export function loadPresets(storage: ReadableStorage | null = browserStorage()): Preset[] {
   if (!storage) return [];
   let raw: string | null;
@@ -79,12 +92,14 @@ export function loadPresets(storage: ReadableStorage | null = browserStorage()):
     data = JSON.parse(raw);
   } catch {
     log("presets:load-invalid", { reason: "unparseable" });
+    backupUnreadable(storage, raw);
     return [];
   }
 
   const envelope = data as { version?: unknown; presets?: unknown } | null;
   if (typeof envelope !== "object" || envelope === null || envelope.version !== STORAGE_VERSION || !Array.isArray(envelope.presets)) {
     log("presets:load-invalid", { reason: "envelope" });
+    backupUnreadable(storage, raw);
     return [];
   }
 

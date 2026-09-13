@@ -22,8 +22,8 @@
 - `src/lib/components/` — ConfigCard, RulerPicker, CountdownDisplay, TotalTimeDisplay, PhaseHeader, VolumeControl, FullscreenButton, PresetBar, PresetSheet, PresetList (reorder screen), KeyboardShortcuts
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 133 unit tests
-- `src/lib/presetStore.test.ts` — 47 preset store unit tests
-- `tests/timer.test.ts` — 129 e2e tests (Playwright)
+- `src/lib/presetStore.test.ts` — 51 preset store unit tests
+- `tests/timer.test.ts` — 138 e2e tests (Playwright)
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases
@@ -32,8 +32,8 @@
 - Pause/resume: subtle toggle sounds, tap screen to resume (no resume button)
 - Background colors: getReady/rest = yellow `#FFBA08`, work = green `#2ECC71`, paused = black, finished = 4-color flash (red/yellow/green/cyan, ~11.5s)
 - Swipe back to work segment inserts a getReady countdown before it
-- Desktop keyboard shortcuts: Space/Enter (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), P (preset sheet when idle), F (fullscreen), Esc (close overlay/home from any workout state), ? (shortcuts help modal)
-- Home screen preset cycling: swipe left/right (touch) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
+- Desktop keyboard shortcuts: Space/Enter (play/pause/resume), Left/Right (skip segment when active, cycle preset when idle), Up/Down (add/remove rep), R (restart workout), H (home when paused/finished), P (preset sheet when idle), M (mute), F (fullscreen), Esc (close overlay/home from any workout state), ? (shortcuts help modal)
+- Home screen preset cycling: swipe left/right (touch), two-finger swipe (trackpad) or Left/Right arrow keys (desktop) to cycle through presets with dot indicator
 
 ## Presets
 - Presets live only on the device, in `localStorage` key `timer-presets` (versioned JSON envelope); see `docs/presets.md`

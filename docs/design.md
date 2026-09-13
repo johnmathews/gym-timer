@@ -6,7 +6,7 @@ The app uses a single-page layout centered on screen with responsive width const
 
 - **Mobile** (<768px): max-width 500px, single-column vertical layout
 - **Desktop** (768px–1023px): max-width 640px, single-column vertical layout
-- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** (`minmax(0, 1fr)` columns for fixed 50/50 split) — config cards on the left, total time + play button on the right, all elements scale with viewport
+- **Desktop wide** (≥1024px): full-width with responsive padding, **2-column grid** (`minmax(0, 9fr) minmax(0, 11fr)`, roughly 45/55) — preset bar, config cards and dots on the left, total time + play button on the right, all elements scale with viewport
 - **Phone landscape** (<500px height): full-width 2-column grid (`minmax(0, 1fr)`) with compressed card sizes
 
 On narrow screens, the layout is a vertical flex column with three sections:
@@ -15,7 +15,7 @@ On narrow screens, the layout is a vertical flex column with three sections:
 3. **Toolbar** — bottom, with action buttons
 
 On wide desktop screens (≥1024px), the idle/home screen switches to a 2-column CSS grid:
-- **Left column**: Three config cards (Work, Rest, Repeat) stacked vertically
+- **Left column**: The preset name bar, the three config cards (Work, Rest, Repeat) stacked vertically, and the preset dots
 - **Right column**: Total time display and play button, vertically centered
 - **Toolbar row**: Spans both columns at the top (fullscreen, volume)
 
@@ -55,8 +55,8 @@ Three responsive breakpoints:
 - App fills full viewport width with responsive padding (`clamp(40px, 5vw, 80px)`)
 - Home screen switches from single column to 2-column grid
 - Config cards scale up: height `clamp(90px, 12vh, 160px)`, labels `clamp(2.5rem, 3.5vw, 4rem)` at weight 600, values up to `6rem`
-- Total time font: `clamp(7rem, 12vw, 20rem)` — sized to fit within a 50/50 grid column
-- Play button: `clamp(80px, 10vw, 160px)`
+- Total time font: `clamp(10rem, 16vw, 30rem)` — sized to fit the wider right column
+- Play button width: `clamp(105px, 14vw, 215px)`
 - Toolbar icons: 48px on the home screen, 36px on the active screen
 
 **`@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)`** — phone landscape:
@@ -109,7 +109,7 @@ On hover-capable devices, the following keyboard shortcuts are available:
 | `Esc`     | Close overlay / Go home from any workout state      |
 | `?`       | Toggle keyboard shortcuts help modal                |
 
-`P` does nothing while the timer runs, while a picker is open, or while another overlay is open, and typing "p" in the preset name field enters the letter as normal.
+`P` works only on the idle home screen: it does nothing during a workout (running, paused or finished), while a picker is open, or while another overlay is open. Typing "p" in the preset name field enters the letter as normal.
 
 **Escape behavior by context:**
 - Shortcuts modal open → closes modal
@@ -154,13 +154,14 @@ Swipe handling on the home screen excludes only the toolbar (volume, fullscreen)
   - **Save as new preset…** opens the name field prefilled with a summary such as `0:30 / 0:15 × 5`; the new preset is appended and becomes active
   - **Rename…** opens the name field prefilled with the current name
   - **Reorder…** (shown with two or more presets) opens a full-screen list (`#preset-reorder`, `PresetList.svelte`) with up/down buttons on each row; every move is saved at once, and Done or Escape returns to the home screen
-  - **Delete "name"** turns into a confirm button; deleting keeps the card values and clears the selection
+  - **Delete "name"** turns into a **Confirm delete** button that stays disabled for half a second, so a quick double tap cannot delete; deleting keeps the card values and clears the selection
   - **Cancel**, a tap on the backdrop, or Escape closes the sheet
 - With no active preset, tapping the bar goes straight to the name field.
 - The name field trims its input, allows 1–40 characters, disables Save when blank, and saves on Enter.
 - If saving fails (storage full or disabled), the sheet or list stays open with the error and nothing changes.
 - A swipe that starts on the bar cycles presets like one that starts on a card; the click that follows the swipe is suppressed, so the sheet does not open.
 - While the sheet or the reorder list is open, arrow keys, Space and Enter do not act on the timer or cycle presets.
+- While either overlay is open, the home screen behind it is `inert`, so nothing behind it can be focused or clicked. Focus moves to the sheet's first control (the name field, or the first action) or to the reorder list's Done button, and returns to the name bar when the overlay closes.
 
 ## Config Cards
 

@@ -16,11 +16,12 @@ The legacy `presets.yml` pipeline (build-time YAML plus a runtime `/presets.yml`
 
 - `id` is the identity (`crypto.randomUUID()`, with a fallback where it is missing). Names are trimmed, 1–40 characters, and may repeat.
 - `work` is a positive integer (seconds), `rest` a non-negative integer, `reps` a positive integer.
-- **Loading** (`loadPresets`): a missing key loads as an empty list. Unparseable JSON, an unknown `version`, or a `presets` value that is not an array also load as empty and log `presets:load-invalid`. Inside a valid envelope, entries that fail validation are dropped one by one and the rest load; a repeated `id` keeps the first entry.
+- **Loading** (`loadPresets`): a missing key loads as an empty list. Unparseable JSON, an unknown `version`, or a `presets` value that is not an array also load as empty and log `presets:load-invalid`. Before that, the unreadable value is copied to `timer-presets-backup`, so the next save (which overwrites `timer-presets`) cannot destroy it, for example a newer format read by an older cached app; a failed backup write does not stop the load. Inside a valid envelope, entries that fail validation are dropped one by one and the rest load; a repeated `id` keeps the first entry.
 - **Saving** (`savePresets`) returns `{ ok: true }` or `{ ok: false, error }`. It never swallows a failure (quota exceeded, storage disabled): callers keep their previous state and show the error.
 - **Editing** uses pure functions that return a new array and never mutate their input: `addPreset`, `updatePreset`, `renamePreset`, `removePreset`, `movePreset`. An invalid name or value throws a `RangeError`; an unknown `id` returns the list unchanged.
 - **Persistence:** `requestPersistence()` calls `navigator.storage.persist()` where the browser has it, which exempts the data from eviction when the device runs low on space. A home-screen web app already avoids Safari's 7-day storage cap, because opening the app resets it.
 - `summaryName()` formats values as `work / rest × reps` (e.g. `0:30 / 0:15 × 5`); the save dialog uses it to prefill the name.
+- `matchesValues()` compares a preset with the current card values and drives the "· edited" marker; `normalizeName()` and `MAX_NAME_LENGTH` (40) back the name field's validation and `maxlength`.
 
 ## Loading and Cycling
 
@@ -31,7 +32,7 @@ In `src/routes/+page.svelte`:
 - `cyclePreset(direction)` moves to the next or previous preset with wraparound. With no active preset, next goes to the first preset and previous to the last.
 - Home-screen swipes use pointer events (50px threshold) with `touch-action: pan-y` on `.home` for iOS. Only the toolbar (volume, fullscreen) is excluded from swipe detection; config cards participate, and the synthesized click that follows a swipe is consumed by a capture-phase click handler so a picker does not open.
 - Trackpad swipes go through `wheel-gestures` (see [design.md](design.md#preset-cycling)).
-- Left/Right arrow keys cycle presets when `$status === "idle"` and no picker is open.
+- Left/Right arrow keys cycle presets when `$status === "idle"` and no picker, preset sheet or reorder list is open.
 - Manual card changes are discarded when cycling to another preset.
 
 ## Creating and Editing
@@ -63,5 +64,6 @@ The `getItem` guard matters: `addInitScript` runs again on every navigation, inc
 
 ## Test Coverage
 
-- **Unit** (`src/lib/presetStore.test.ts`): loading and validation, saving and save failures, every pure operation, id generation, the persistence request, and the default-storage paths.
-- **E2e** (`tests/timer.test.ts`): empty-storage defaults, seeded presets loading and surviving a reload, corrupt storage loading as empty, arrow/swipe/wheel cycling and wraparound, the dot indicator, and the name bar and sheet (create, the edited marker and Update, save as new, rename, delete with confirmation, cancel, the blank-name guard, a failed save, a swipe that starts on the bar, and Escape), and reordering (the new order drives cycling and survives a reload, the edge buttons are disabled, Reorder is hidden with fewer than two presets, and Escape closes the list).
+- **Unit** (`src/lib/presetStore.test.ts`): loading and validation, the backup of unreadable values, saving and save failures, every pure operation, id generation, the persistence request, and the default-storage paths.
+- **E2e** (`tests/timer.test.ts`): empty-storage defaults, seeded presets loading and surviving a reload, corrupt storage loading as empty, arrow/swipe/wheel cycling and wraparound, the dot indicator, and the name bar and sheet (create with the button or Enter, the edited marker and Update, save as new, rename, delete with confirmation, cancel, the blank-name guard, a failed save, a swipe that starts on the bar, and Escape), and reordering (the new order drives cycling and survives a reload, the edge buttons are disabled, Reorder is hidden with fewer than two presets, and Escape closes the list), and the `P` shortcut (either case, ignored during a picker or a workout, typing "p" in the name field, arrow keys ignored while the sheet is open, and its entry in the help).
+- **E2e, overlays and edge cases:** the page behind an open overlay cannot be reached by keyboard, focus moves into the sheet or list and back to the bar, a double tap on Delete does not delete, cycling after deleting the active preset, deleting the only preset, a failed save while reordering, and `P` being ignored while the help or the reorder list is open.
