@@ -2012,3 +2012,35 @@ test.describe("Preset overlays: focus, safety and edge cases", () => {
     await expect(page.getByTestId("preset-reorder")).toBeVisible();
   });
 });
+
+test.describe("Preset bar placement", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+  });
+
+  test("the preset name sits below the cards, to the right of the dots", async ({ page }) => {
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const bar = (await page.getByTestId("preset-bar").boundingBox())!;
+    const repeat = (await page.getByTestId("config-card-repeat").boundingBox())!;
+    const dots = (await page.getByTestId("preset-dots").boundingBox())!;
+    expect(bar.y).toBeGreaterThanOrEqual(repeat.y + repeat.height);
+    expect(Math.abs(bar.y + bar.height / 2 - (dots.y + dots.height / 2))).toBeLessThan(4);
+    expect(bar.x).toBeGreaterThanOrEqual(dots.x + dots.width);
+  });
+
+  test("with no presets, Save as preset sits below the cards", async ({ page }) => {
+    await page.goto("/");
+    const bar = (await page.getByTestId("preset-bar").boundingBox())!;
+    const repeat = (await page.getByTestId("config-card-repeat").boundingBox())!;
+    expect(bar.y).toBeGreaterThanOrEqual(repeat.y + repeat.height);
+  });
+
+  test("the preset name uses small text on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedPresets(page, THREE_PRESETS);
+    await page.goto("/");
+    const size = await page.getByTestId("preset-bar").evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(size).toBeLessThanOrEqual(16);
+  });
+});

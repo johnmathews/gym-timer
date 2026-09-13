@@ -59,3 +59,11 @@ Every item below was observed.
 ## Tooling Notes
 
 This session ran in a git worktree. The harness refused writes to the main checkout and compound git shell commands, so the engineering-team run's evaluation report, plan and `run.yaml` were kept in the session scratchpad. Multi-part edits to a single file were made with small Python patch scripts that check every match before writing.
+
+## Follow-Up: A Quieter Preset Bar
+
+After using it on the phone, the user found the name bar above the cards too prominent. It now sits below the cards, in one row with the preset dots: `● ○  back-extensions ⌄`, or just "Save as preset…" when there are no presets. The text is smaller (0.95rem on a phone, down from 1.3rem) and lighter, and the tap target stays 44px tall. The dots render only when presets exist, so "Save as preset…" stays centred.
+
+- Three new e2e tests were run against the old layout and failed. They check the bar sits below the Repeat card, is vertically aligned with the dots and to their right, sits below the cards in the empty state, and is at most 16px on a phone. The old layout measured 20.8px. All three pass now. Totals: 184 unit tests and 141 e2e tests; lint and `svelte-check` are clean apart from the 2 existing warnings.
+- Screenshots at 390×844, 844×390 and 1440×900 look right. Landscape now has more room, because the bar no longer sits above the cards.
+- Removed a stray `static/presets.yml` from the main checkout. The old Playwright setup copied the test fixture there, and `.gitignore` used to hide it. Once that `.gitignore` line was removed, the file would have shipped in builds.

@@ -24,19 +24,20 @@
 </button>
 
 <style>
+ /* Deliberately quiet: small text beside the preset dots, with a full-height tap target */
  .preset-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
-  padding: 6px 12px;
+  padding: 6px 4px;
   border: none;
   background: none;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.85);
   font: inherit;
-  font-size: 1.3rem;
+  font-size: 0.95rem;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -50,7 +51,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: 500;
+  min-width: 0;
  }
 
  .placeholder {
@@ -66,19 +68,19 @@
 
  .chevron {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   opacity: 0.6;
  }
 
  @media (min-width: 1024px) {
   .preset-bar {
-   font-size: clamp(1.4rem, 1.8vw, 2.2rem);
+   font-size: clamp(1rem, 1.2vw, 1.4rem);
   }
 
   .chevron {
-   width: 32px;
-   height: 32px;
+   width: 20px;
+   height: 20px;
   }
  }
 </style>

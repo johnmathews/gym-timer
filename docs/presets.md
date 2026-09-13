@@ -37,7 +37,7 @@ In `src/routes/+page.svelte`:
 
 ## Creating and Editing
 
-- Presets are created, updated, renamed and deleted from the name bar above the cards and the sheet it opens (layout and behaviour in [design.md](design.md#preset-bar-and-sheet)).
+- Presets are created, updated, renamed and deleted from the name bar below the cards (next to the dots) and the sheet it opens (layout and behaviour in [design.md](design.md#preset-bar-and-sheet)).
 - Every change goes through the store's pure operations and then `savePresets()`. The page adopts the new list only when the save returns `{ ok: true }`; on failure the sheet shows the error and the previous list stays.
 - After the first successful save in a session, the page calls `requestPersistence()`.
 - A new preset is appended to the end of the list and becomes active. Deleting the active preset keeps the card values and clears the selection; cycling then starts from the first preset (next) or the last (previous).
@@ -45,7 +45,7 @@ In `src/routes/+page.svelte`:
 
 ## Dot Indicator
 
-- Rendered inside the `.cards` div, below the Repeat card, one dot per stored preset
+- Rendered inside the `.cards` div, below the Repeat card, one dot per stored preset, in a row with the name bar to their right; with no presets the row holds only "Save as preset…"
 - Each dot is a `<span class="dot">`; the active dot is brighter (`rgba(255,255,255,0.85)`) than the others (`rgba(255,255,255,0.25)`)
 - Dots use a CSS transition for smooth visual feedback
 
