@@ -22,6 +22,22 @@ Presets are defined in `presets.yml` at the project root. Each preset has a name
 
 The first preset is loaded by default on page load. All values should be within slider ranges (work 5-600s, rest 0-300s, reps 1-20) and aligned to the 5-second step grid for full slider compatibility.
 
+## Device Storage
+
+`src/lib/presetStore.ts` keeps presets on the device in `localStorage` under the key `timer-presets`:
+
+```json
+{ "version": 1, "presets": [{ "id": "…", "name": "5 Hangs", "work": 30, "rest": 15, "reps": 5 }] }
+```
+
+- `id` is the identity (`crypto.randomUUID()`, with a fallback where it is missing). Names are trimmed, 1–40 characters, and may repeat.
+- `work` is a positive integer (seconds), `rest` a non-negative integer, `reps` a positive integer.
+- **Loading** (`loadPresets`): a missing key loads as an empty list. Unparseable JSON, an unknown `version`, or a `presets` value that is not an array also load as empty and log `presets:load-invalid`. Inside a valid envelope, entries that fail validation are dropped one by one and the rest load; a repeated `id` keeps the first entry.
+- **Saving** (`savePresets`) returns `{ ok: true }` or `{ ok: false, error }`. It never swallows a failure (quota exceeded, storage disabled): callers keep their previous state and show the error.
+- **Editing** uses pure functions that return a new array and never mutate their input: `addPreset`, `updatePreset`, `renamePreset`, `removePreset`, `movePreset`. An invalid name or value throws a `RangeError`; an unknown `id` returns the list unchanged.
+- **Persistence:** `requestPersistence()` calls `navigator.storage.persist()` where the browser has it, which exempts the data from eviction when the device runs low on space. A home-screen web app already avoids Safari's 7-day storage cap, because opening the app resets it.
+- `summaryName()` formats values as `work / rest × reps` (e.g. `0:30 / 0:15 × 5`); the save dialog uses it to prefill the name.
+
 ## Architecture
 
 ### Build-Time Defaults
