@@ -41,7 +41,9 @@ jobs:
         run: npx playwright test
 
   build-and-push:
-    # Runs in parallel with `test` — does not gate on it. PRs do not publish.
+    # Publishes only after `test` passes: the home server auto-deploys :latest
+    # (What's Up Docker), so a red commit must never reach the registry. PRs do not publish.
+    needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
