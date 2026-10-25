@@ -45,6 +45,8 @@ npm run test:e2e
 npm test
 ```
 
+E2e tests import `test` and `expect` from `tests/fixtures.ts`, whose `page.goto` and `page.reload` wait until the prerendered page has hydrated. Clicking earlier is silently lost, which is what made the suite flaky (#17).
+
 ## Documentation
 
 - [Timer engine](docs/timer-engine.md): phases, the wall-clock timeline, pause/resume and skipping
