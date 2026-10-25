@@ -1,0 +1,9 @@
+# Keep the SHA-pinned GitHub Actions in .github/workflows/ current via
+# reviewable PRs. Each pin carries its release tag as a trailing comment,
+# which Dependabot updates alongside the SHA.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
