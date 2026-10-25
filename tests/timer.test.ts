@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.describe("Timer", () => {
   test.beforeEach(async ({ page }) => {
@@ -15,6 +16,20 @@ test.describe("Timer", () => {
     await page.getByTestId("config-card-work").click();
     await expect(page.getByTestId("ruler-picker")).toBeVisible();
     expect(errors).toHaveLength(0);
+  });
+
+  test("navigation waits for hydration even when the JS is slow", async ({ page, context }) => {
+    // Regression for gym-timer #17. Delaying the app's JS widens the gap between
+    // the `load` event and hydration from a few milliseconds to a full second.
+    // Without the fixture's wait, this click lands on inert prerendered HTML and
+    // the picker never opens; that is the flake CI hit.
+    await context.route(/\/_app\/immutable\/.*\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await route.continue();
+    });
+    await page.goto("/");
+    await page.getByTestId("config-card-work").click();
+    await expect(page.getByTestId("ruler-picker")).toBeVisible();
   });
 
   test("shows three config cards on landing", async ({ page }) => {

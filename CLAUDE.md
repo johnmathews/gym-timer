@@ -23,7 +23,8 @@
 - `src/routes/+page.svelte` — main page (layout, state, circular icon buttons, wake lock)
 - `src/lib/timer.test.ts` — 133 unit tests
 - `src/lib/presetStore.test.ts` — 51 preset store unit tests
-- `tests/timer.test.ts` — 141 e2e tests (Playwright)
+- `tests/timer.test.ts` — 142 e2e tests (Playwright)
+- `tests/fixtures.ts` — the `test`/`expect` every e2e test imports; its `page.goto`/`page.reload` wait for hydration
 - `docs/` — detailed docs (timer engine, audio, slider scales, wake lock, design, presets)
 
 ## Timer Phases
@@ -40,6 +41,10 @@
 - `savePresets()` returns `{ ok, error }` and never fails silently; callers keep their previous state and show the error
 - The app ships with no presets; with none, the cards show the defaults (1:00 / 0:00 / x10)
 - E2e tests seed presets by writing `timer-presets` in `page.addInitScript` before `page.goto`
+
+## E2e Tests
+- Import `test` and `expect` from `./fixtures`, not `@playwright/test`. The page is prerendered, so cards and buttons are visible before SvelteKit hydrates, and a click in that window is lost. `+layout.svelte` sets `<html data-hydrated>` on mount; the fixture's `goto` and `reload` wait for it
+- A test that navigates some other way must call `waitForHydration(page)` before interacting
 
 ## Deployment
 - Production is deployed on the infra VM as part of its Docker Compose stack
